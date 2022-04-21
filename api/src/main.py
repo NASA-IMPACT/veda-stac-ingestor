@@ -34,3 +34,36 @@ def retrieve_ingestion_status(
         raise HTTPException(
             status_code=404, detail="No ingestion found with provided ID"
         )
+
+
+@app.get("/creds")
+def get_temporary_credentials(
+    bucket_name: str = Depends(dependencies.get_upload_bucket),
+    credentials=Depends(dependencies.get_credentials),
+):
+    """
+    Get credentials to allow access to an S3 prefix.
+    ```py
+    import boto
+    import requests
+
+    response = requests.get("https://{url}/creds").json()
+    s3 = boto3.client("s3", **response['credentials'])
+    s3.put_object(
+        Bucket=response['s3']['bucket'],
+        Key=f"{response['s3']['prefix']}/my-file"
+        Body="🚀"
+    )
+    ```
+    """
+    return {
+        "s3": {
+            "bucket": bucket_name,
+            "prefix": credentials["AssumedRoleUser"]["AssumedRoleId"],
+        },
+        "credentials": {
+            "aws_access_key_id": credentials["Credentials"]["AccessKeyId"],
+            "aws_secret_access_key": credentials["Credentials"]["SecretAccessKey"],
+            "aws_session_token": credentials["Credentials"]["SessionToken"],
+        },
+    }
