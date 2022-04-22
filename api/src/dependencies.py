@@ -1,6 +1,3 @@
-import random
-import string
-
 import boto3
 from fastapi import Depends, HTTPException, security
 
@@ -11,14 +8,6 @@ authentication = security.HTTPBasic()
 
 def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
     return credentials.username
-
-
-def get_random_id():
-    return "".join(
-        random.choices(
-            string.ascii_lowercase + string.ascii_uppercase + string.digits, k=12
-        )
-    )
 
 
 def get_db() -> services.Database:

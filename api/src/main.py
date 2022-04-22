@@ -20,10 +20,9 @@ async def create_ingestion(
     item: schemas.AccessibleItem,
     username: str = Depends(dependencies.get_username),
     db: services.Database = Depends(dependencies.get_db),
-    random_id: str = Depends(dependencies.get_random_id),
 ) -> schemas.Ingestion:
     return schemas.Ingestion(
-        id=random_id,
+        id=item.id,
         created_by=username,
         item=item,
         status=schemas.Status.queued,
