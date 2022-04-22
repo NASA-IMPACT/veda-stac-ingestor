@@ -1,4 +1,4 @@
-from typing import List
+from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException
 
 from . import schemas, dependencies, services
@@ -7,12 +7,12 @@ from . import schemas, dependencies, services
 app = FastAPI()
 
 
-@app.get("/ingestions", response_model=List[schemas.Ingestion])
+@app.get("/ingestions", response_model=schemas.ListResponse)
 async def list_ingestions(
+    list_request: schemas.ListRequest = Depends(),
     db: services.Database = Depends(dependencies.get_db),
-) -> schemas.Ingestion:
-    # TODO: Doesn't work
-    return db.fetch_many(status="cancelled")
+):
+    return db.fetch_many(status=list_request.status, next=list_request.next)
 
 
 @app.post("/ingestions", response_model=schemas.Ingestion)

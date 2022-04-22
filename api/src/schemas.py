@@ -1,9 +1,13 @@
 from datetime import datetime
 import enum
+import json
+import binascii
+import base64
 from urllib.parse import urlparse
-from typing import Dict, Optional, TYPE_CHECKING, TypedDict
+from typing import Dict, List, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, validator
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, validator, dataclasses, error_wrappers
 from stac_pydantic import Item, shared
 
 from . import validators
@@ -88,3 +92,41 @@ class AwsCredentials(BaseModel):
 class TemporaryCredentials(BaseModel):
     s3: S3Details
     credentials: AwsCredentials
+
+
+@dataclasses.dataclass
+class ListRequest:
+    status: Status = Status.queued
+    next: Optional[str] = None
+
+    def __post_init_post_parse__(self) -> None:
+        if self.next is None:
+            return
+
+        try:
+            self.next = json.loads(base64.b64decode(self.next))
+        except (UnicodeDecodeError, binascii.Error):
+            raise RequestValidationError(
+                [
+                    error_wrappers.ErrorWrapper(
+                        ValueError(
+                            "Unable to decode next token. Should be base64 encoded JSON"
+                        ),
+                        "query.next",
+                    )
+                ]
+            )
+
+
+class ListResponse(BaseModel):
+    items: List[Ingestion]
+    next: Optional[str]
+
+    @validator("next", pre=True)
+    def b64_encode_next(cls, next):
+        """
+        Base64 encode next parameter for easier transportability
+        """
+        if isinstance(next, dict):
+            return base64.b64encode(json.dumps(next).encode())
+        return next
