@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 
 from . import schemas, dependencies, services
@@ -6,37 +7,54 @@ from . import schemas, dependencies, services
 app = FastAPI()
 
 
-@app.post("/submit", response_model=schemas.IngestionStatus)
-async def submit(
+@app.get("/ingestions", response_model=List[schemas.Ingestion])
+async def list_ingestions(
+    db: services.Database = Depends(dependencies.get_db),
+) -> schemas.Ingestion:
+    # TODO: Doesn't work
+    return db.fetch_many(status="cancelled")
+
+
+@app.post("/ingestions", response_model=schemas.Ingestion)
+async def create_ingestion(
     item: schemas.AccessibleItem,
     username: str = Depends(dependencies.get_username),
-    queue: services.Queue = Depends(dependencies.get_queue),
     db: services.Database = Depends(dependencies.get_db),
-    insertion_id: str = Depends(dependencies.get_random_id),
-):
-    status = schemas.IngestionStatus(
-        created_by=username, item=item, status=schemas.Status.queued, id=insertion_id
+    random_id: str = Depends(dependencies.get_random_id),
+) -> schemas.Ingestion:
+    ingestion = schemas.Ingestion(
+        id=random_id,
+        created_by=username,
+        item=item,
+        status=schemas.Status.queued,
     )
-    queue.insert(status)
-    db.write(status)
-    return status
+    return ingestion.insert_into_queue(db)
 
 
-@app.get("/status/{ingestion_id}", response_model=schemas.IngestionStatus)
-def retrieve_ingestion_status(
-    ingestion_id: str,
-    username: str = Depends(dependencies.get_username),
+@app.get("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
+def get_ingestion(
+    ingestion: schemas.Ingestion = Depends(dependencies.load_ingestion),
+) -> schemas.Ingestion:
+    return ingestion
+
+
+@app.delete("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
+def delete_ingestion(
+    ingestion: schemas.Ingestion = Depends(dependencies.load_ingestion),
     db: services.Database = Depends(dependencies.get_db),
-):
-    try:
-        return db.load(username=username, ingestion_id=ingestion_id)
-    except services.NotInDb:
+) -> schemas.Ingestion:
+    if ingestion.status != schemas.Status.queued:
         raise HTTPException(
-            status_code=404, detail="No ingestion found with provided ID"
+            status_code=400,
+            detail=(
+                "Unable to delete ingestion if status is not "
+                f"{schemas.Status.queued}"
+            ),
         )
+    return ingestion.delete_from_queue(db)
 
 
-@app.get("/creds")
+@app.get("/creds", response_model=schemas.TemporaryCredentials)
 def get_temporary_credentials(
     bucket_name: str = Depends(dependencies.get_upload_bucket),
     credentials=Depends(dependencies.get_credentials),
@@ -47,7 +65,8 @@ def get_temporary_credentials(
     import boto
     import requests
 
-    response = requests.get("https://{url}/creds").json()
+    api_endpoint = "TODO: Put ingestion API host here"
+    response = requests.get(f"https://{api_endpoint}/creds").json()
     s3 = boto3.client("s3", **response['credentials'])
     s3.put_object(
         Bucket=response['s3']['bucket'],

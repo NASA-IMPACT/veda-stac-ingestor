@@ -3,9 +3,9 @@ import random
 import string
 
 import boto3
-from fastapi import Depends, security
+from fastapi import Depends, HTTPException, security
 
-from . import services
+from . import services, config
 
 authentication = security.HTTPBasic()
 
@@ -22,26 +22,30 @@ def get_random_id():
     )
 
 
-def get_queue() -> services.Queue:
-    return services.Queue()
-
-
-# TODO: Wire up to actual table
-_db = services.Database()
-
-
 def get_db() -> services.Database:
-    return _db
+    client = boto3.resource("dynamodb")
+    return services.Database(table=client.Table(config.settings.dynamodb_table))
+
+
+def load_ingestion(
+    ingestion_id: str,
+    db: services.Database = Depends(get_db),
+    username: str = Depends(get_username),
+):
+    try:
+        return db.fetch_one(username=username, ingestion_id=ingestion_id)
+    except services.NotInDb:
+        raise HTTPException(
+            status_code=404, detail="No ingestion found with provided ID"
+        )
 
 
 def get_credentials_role_arn():
-    # return os.environ.get("S3_ROLE_ARN")
-    return "arn:aws:iam::552819999234:role/alukach-s3-prefix-upload-test"
+    return config.settings.s3_role_arn
 
 
 def get_upload_bucket() -> str:
-    # return os.environ.get("S3_UPLOAD_BUCKET")
-    return "24hr-tmp"
+    return config.settings.s3_upload_bucket
 
 
 def get_credentials(
