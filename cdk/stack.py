@@ -1,11 +1,10 @@
-import resource
-from unicodedata import name
 from aws_cdk import (
     RemovalPolicy,
     Stack,
     aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_s3 as s3,
+    aws_ssm as ssm,
 )
 from constructs import Construct
 
@@ -18,6 +17,21 @@ class StacIngestionSystem(Stack):
         bucket = self.build_bucket()
         role = self.build_upload_role(bucket)
 
+        self.register_ssm_parameter(
+            name="s3_role_arn",
+            value=role.role_arn,
+            description="ARN of IAM Role to be assumed by users when uploading data",
+        )
+        self.register_ssm_parameter(
+            name="s3_upload_bucket",
+            value=bucket.bucket_name,
+            description="Name of bucket used to store uploaded STAC assets",
+        )
+        self.register_ssm_parameter(
+            name="dynamodb_table",
+            value=table.table_name,
+            description="Name of table used to store ingestions",
+        )
 
     def build_table(self) -> dynamodb.ITable:
         table = dynamodb.Table(
@@ -73,3 +87,14 @@ class StacIngestionSystem(Stack):
         )
         return role
 
+    def register_ssm_parameter(
+        self, name: str, value: str, description: str
+    ) -> ssm.IStringParameter:
+        parameter_namespace = Stack.of(self).stack_name
+        return ssm.StringParameter(
+            self,
+            f"{name.replace('_', '-')}-parameter",
+            description=description,
+            parameter_name=f"/{parameter_namespace}/{name}",
+            string_value=value,
+        )
