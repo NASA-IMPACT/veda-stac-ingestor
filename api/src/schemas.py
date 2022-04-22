@@ -64,11 +64,11 @@ class Ingestion(BaseModel):
     def set_ts_now(cls, v):
         return v or datetime.now()
 
-    def insert_into_queue(self, db: "services.Database"):
+    def enqueue(self, db: "services.Database"):
         self.status = Status.queued
         return self.save(db)
 
-    def delete_from_queue(self, db: "services.Database"):
+    def cancel(self, db: "services.Database"):
         self.status = Status.cancelled
         return self.save(db)
 

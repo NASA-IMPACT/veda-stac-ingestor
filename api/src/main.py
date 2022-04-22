@@ -22,25 +22,24 @@ async def create_ingestion(
     db: services.Database = Depends(dependencies.get_db),
     random_id: str = Depends(dependencies.get_random_id),
 ) -> schemas.Ingestion:
-    ingestion = schemas.Ingestion(
+    return schemas.Ingestion(
         id=random_id,
         created_by=username,
         item=item,
         status=schemas.Status.queued,
-    )
-    return ingestion.insert_into_queue(db)
+    ).enqueue(db)
 
 
 @app.get("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
 def get_ingestion(
-    ingestion: schemas.Ingestion = Depends(dependencies.load_ingestion),
+    ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
 ) -> schemas.Ingestion:
     return ingestion
 
 
 @app.delete("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
-def delete_ingestion(
-    ingestion: schemas.Ingestion = Depends(dependencies.load_ingestion),
+def cancel_ingestion(
+    ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
     if ingestion.status != schemas.Status.queued:
@@ -51,7 +50,7 @@ def delete_ingestion(
                 f"{schemas.Status.queued}"
             ),
         )
-    return ingestion.delete_from_queue(db)
+    return ingestion.cancel(db)
 
 
 @app.get("/creds", response_model=schemas.TemporaryCredentials)

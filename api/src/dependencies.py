@@ -26,7 +26,7 @@ def get_db() -> services.Database:
     return services.Database(table=client.Table(config.settings.dynamodb_table))
 
 
-def load_ingestion(
+def fetch_ingestion(
     ingestion_id: str,
     db: services.Database = Depends(get_db),
     username: str = Depends(get_username),
