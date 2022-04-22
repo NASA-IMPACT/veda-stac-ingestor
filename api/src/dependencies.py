@@ -51,7 +51,6 @@ def get_upload_bucket() -> str:
 def get_credentials(
     role_arn=Depends(get_credentials_role_arn), username=Depends(get_username)
 ):
-    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#STS.Client.assume_role
     client = boto3.client("sts")
     return client.assume_role(
         RoleArn=role_arn,
