@@ -41,7 +41,21 @@ def get_ingestion(
     return ingestion
 
 
-@app.delete("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
+@app.patch(
+    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+)
+def update_ingestion(
+    update: schemas.UpdateIngestionRequest,
+    ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
+    db: services.Database = Depends(dependencies.get_db),
+):
+    updated_item = ingestion.copy(update=update.dict(exclude_unset=True))
+    return updated_item.save(db)
+
+
+@app.delete(
+    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+)
 def cancel_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),

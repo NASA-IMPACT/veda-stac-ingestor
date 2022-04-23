@@ -132,3 +132,8 @@ class ListIngestionResponse(BaseModel):
         if isinstance(next, dict):
             return base64.b64encode(json.dumps(next).encode())
         return next
+
+
+class UpdateIngestionRequest(BaseModel):
+    status: Status = None
+    message: str = None
