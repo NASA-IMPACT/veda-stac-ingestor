@@ -1,4 +1,3 @@
-from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException
 
 from . import schemas, dependencies, services
@@ -7,15 +6,19 @@ from . import schemas, dependencies, services
 app = FastAPI()
 
 
-@app.get("/ingestions", response_model=schemas.ListResponse)
+@app.get(
+    "/ingestions", response_model=schemas.ListIngestionResponse, tags=["Ingestion"]
+)
 async def list_ingestions(
-    list_request: schemas.ListRequest = Depends(),
+    list_request: schemas.ListIngestionRequest = Depends(),
     db: services.Database = Depends(dependencies.get_db),
 ):
-    return db.fetch_many(status=list_request.status, next=list_request.next)
+    return db.fetch_many(
+        status=list_request.status, next=list_request.next, limit=list_request.limit
+    )
 
 
-@app.post("/ingestions", response_model=schemas.Ingestion)
+@app.post("/ingestions", response_model=schemas.Ingestion, tags=["Ingestion"])
 async def create_ingestion(
     item: schemas.AccessibleItem,
     username: str = Depends(dependencies.get_username),
@@ -29,7 +32,9 @@ async def create_ingestion(
     ).enqueue(db)
 
 
-@app.get("/ingestions/{ingestion_id}", response_model=schemas.Ingestion)
+@app.get(
+    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+)
 def get_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
 ) -> schemas.Ingestion:
@@ -52,7 +57,7 @@ def cancel_ingestion(
     return ingestion.cancel(db)
 
 
-@app.get("/creds", response_model=schemas.TemporaryCredentials)
+@app.get("/creds", response_model=schemas.TemporaryCredentials, tags=["Data"])
 def get_temporary_credentials(
     bucket_name: str = Depends(dependencies.get_upload_bucket),
     credentials=Depends(dependencies.get_credentials),

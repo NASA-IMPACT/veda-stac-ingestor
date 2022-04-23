@@ -28,16 +28,18 @@ class Database:
         except KeyError:
             raise NotInDb("Record not found")
 
-    def fetch_many(self, status: str, next: dict = None) -> schemas.ListResponse:
+    def fetch_many(
+        self, status: str, next: dict = None, limit: int = None
+    ) -> schemas.ListIngestionResponse:
         response = self.table.query(
             IndexName="status",
             KeyConditionExpression=conditions.Key("status").eq(status),
-            Limit=1,
+            **{"Limit": limit} if limit else {},
             **{"ExclusiveStartKey": next} if next else {},
         )
         return {
             "items": parse_obj_as(List[schemas.Ingestion], response["Items"]),
-            "next": response.get('LastEvaluatedKey'),
+            "next": response.get("LastEvaluatedKey"),
         }
 
 

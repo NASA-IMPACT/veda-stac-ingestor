@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from typing import Dict, List, Optional, TYPE_CHECKING
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, validator, dataclasses, error_wrappers
+from pydantic import BaseModel, PositiveInt, validator, dataclasses, error_wrappers
 from stac_pydantic import Item, shared
 
 from . import validators
@@ -51,13 +51,13 @@ class Status(str, enum.Enum):
 
 class Ingestion(BaseModel):
     id: str
-    created_at: datetime = None
-    updated_at: datetime = None
-    created_by: str
-
-    item: Item
     status: Status
     message: Optional[str]
+    created_by: str
+    created_at: datetime = None
+    updated_at: datetime = None
+
+    item: Item
 
     @validator("created_at", pre=True, always=True, allow_reuse=True)
     @validator("updated_at", pre=True, always=True, allow_reuse=True)
@@ -95,11 +95,13 @@ class TemporaryCredentials(BaseModel):
 
 
 @dataclasses.dataclass
-class ListRequest:
+class ListIngestionRequest:
     status: Status = Status.queued
+    limit: PositiveInt = None
     next: Optional[str] = None
 
     def __post_init_post_parse__(self) -> None:
+        # https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1049987786
         if self.next is None:
             return
 
@@ -118,7 +120,7 @@ class ListRequest:
             )
 
 
-class ListResponse(BaseModel):
+class ListIngestionResponse(BaseModel):
     items: List[Ingestion]
     next: Optional[str]
 
