@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 
-from . import schemas, dependencies, services
+from . import schemas, dependencies, services, config
 
 
-app = FastAPI()
+app = FastAPI(root_path=config.settings.root_path)
 
 
 @app.get(

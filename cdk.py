@@ -11,6 +11,7 @@ app = cdk.App()
 StacIngestionSystem(
     app,
     f"veda-stac-ingestion-system-{stage}",
+    stage=stage,
 )
 
 # Tag infrastructure

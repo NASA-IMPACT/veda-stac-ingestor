@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     dynamodb_table: str
 
+    root_path: str
+
     class Config(AwsSsmSourceConfig):
         env_file = ".env"
 
