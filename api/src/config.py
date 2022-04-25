@@ -1,5 +1,6 @@
 import os
-from pydantic import BaseSettings
+from typing import Optional
+from pydantic import BaseSettings, HttpUrl
 from pydantic_ssm_settings import AwsSsmSourceConfig
 
 
@@ -7,6 +8,7 @@ class Settings(BaseSettings):
     s3_role_arn: str
     s3_upload_bucket: str
 
+    dynamodb_endpoint: Optional[HttpUrl]
     dynamodb_table: str
 
     class Config(AwsSsmSourceConfig):

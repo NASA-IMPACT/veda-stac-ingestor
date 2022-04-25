@@ -1,18 +1,40 @@
+from typing import TYPE_CHECKING
+import logging
+
 import boto3
 from fastapi import Depends, HTTPException, security
 
 from . import services, config
 
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb import Client
+
+
+logger = logging.getLogger(__name__)
 authentication = security.HTTPBasic()
+
+
+def get_settings() -> config.Settings:
+    return config.settings
 
 
 def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
     return credentials.username
 
 
-def get_db() -> services.Database:
-    client = boto3.resource("dynamodb")
-    return services.Database(table=client.Table(config.settings.dynamodb_table))
+def get_db_client(
+    settings: config.Settings = Depends(get_settings),
+) -> "Client":
+    kwargs = {}
+    if settings.dynamodb_endpoint:
+        logger.warn("Using custom dynamodb endpoint: %s", settings.dynamodb_endpoint)
+        kwargs["endpoint_url"] = settings.dynamodb_endpoint
+
+    return boto3.resource("dynamodb", **kwargs)
+
+
+def get_db(db_client: "Client" = Depends(get_db_client)) -> services.Database:
+    return services.Database(table=db_client.Table(config.settings.dynamodb_table))
 
 
 def fetch_ingestion(
@@ -28,12 +50,12 @@ def fetch_ingestion(
         )
 
 
-def get_credentials_role_arn():
-    return config.settings.s3_role_arn
+def get_credentials_role_arn(settings: config.Settings = Depends(get_settings)):
+    return settings.s3_role_arn
 
 
-def get_upload_bucket() -> str:
-    return config.settings.s3_upload_bucket
+def get_upload_bucket(settings: config.Settings = Depends(get_settings)) -> str:
+    return settings.s3_upload_bucket
 
 
 def get_credentials(
