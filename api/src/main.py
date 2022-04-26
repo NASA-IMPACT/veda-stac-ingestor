@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 
-from . import schemas, dependencies, services
+from . import schemas, dependencies, services, config
 
 
-app = FastAPI()
+app = FastAPI(root_path=config.settings.root_path)
 
 
 @app.get(
@@ -79,7 +79,7 @@ def get_temporary_credentials(
     """
     Get credentials to allow access to an S3 prefix.
     ```py
-    import boto
+    import boto3
     import requests
 
     api_endpoint = "TODO: Put ingestion API host here"
@@ -87,7 +87,7 @@ def get_temporary_credentials(
     s3 = boto3.client("s3", **response['credentials'])
     s3.put_object(
         Bucket=response['s3']['bucket'],
-        Key=f"{response['s3']['prefix']}/my-file"
+        Key=f"{response['s3']['prefix']}/my-file",
         Body="🚀"
     )
     ```

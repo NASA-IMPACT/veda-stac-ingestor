@@ -1,8 +1,11 @@
 from aws_cdk import (
     RemovalPolicy,
     Stack,
+    aws_apigateway as apigateway,
     aws_dynamodb as dynamodb,
     aws_iam as iam,
+    aws_lambda_python_alpha,
+    aws_lambda,
     aws_s3 as s3,
     aws_ssm as ssm,
 )
@@ -10,12 +13,24 @@ from constructs import Construct
 
 
 class StacIngestionSystem(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(
+        self, scope: Construct, construct_id: str, stage: str, **kwargs
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         table = self.build_table()
         bucket = self.build_bucket()
-        role = self.build_upload_role(bucket)
+        role = self.build_upload_role(bucket=bucket)
+        handler = self.build_lambda(
+            table=table,
+            role=role,
+            bucket=bucket,
+            stage=stage,
+        )
+        self.build_api(
+            handler=handler,
+            stage=stage,
+        )
 
         self.register_ssm_parameter(
             name="s3_role_arn",
@@ -52,12 +67,16 @@ class StacIngestionSystem(Stack):
     def build_bucket(self) -> s3.IBucket:
         return s3.Bucket(self, "upload-bucket", removal_policy=RemovalPolicy.DESTROY)
 
-    def build_upload_role(self, bucket: s3.IBucket) -> iam.IRole:
-        role = iam.Role(
+    def build_upload_role(
+        self,
+        *,
+        bucket: s3.IBucket,
+    ) -> iam.IRole:
+        return iam.Role(
             self,
             "s3-upload",
             description="Role granted to users to enable upload of STAC assets to bucket",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            assumed_by=iam.AccountPrincipal(Stack.of(self).account),
             inline_policies={
                 "allow-write": iam.PolicyDocument(
                     statements=[
@@ -78,17 +97,51 @@ class StacIngestionSystem(Stack):
                 )
             },
         )
-        role.assume_role_policy.add_statements(
-            iam.PolicyStatement(
-                actions=["sts:AssumeRole"],
-                principals=[iam.AccountPrincipal(Stack.of(self).account)],
-                conditions={},
-            )
+
+    def build_lambda(
+        self,
+        *,
+        table: dynamodb.ITable,
+        role: iam.IRole,
+        bucket: s3.IBucket,
+        stage: str,
+    ) -> apigateway.LambdaRestApi:
+        handler = aws_lambda_python_alpha.PythonFunction(
+            self,
+            "api-handler",
+            entry="api",
+            index="src/handler.py",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            environment={
+                "ROOT_PATH": f"/{stage}",
+                "S3_ROLE_ARN": role.role_arn,
+                "S3_UPLOAD_BUCKET": bucket.bucket_name,
+                "DYNAMODB_TABLE": table.table_name,
+            },
         )
-        return role
+        table.grant_read_write_data(handler)
+        role.grant(handler.grant_principal, "sts:AssumeRole")
+        return handler
+
+    def build_api(
+        self,
+        *,
+        handler: aws_lambda.IFunction,
+        stage: str,
+    ) -> apigateway.LambdaRestApi:
+        return apigateway.LambdaRestApi(
+            self,
+            f"{Stack.of(self).stack_name}-api",
+            handler=handler,
+            cloud_watch_role=True,
+            deploy_options=apigateway.StageOptions(stage_name=stage),
+        )
 
     def register_ssm_parameter(
-        self, name: str, value: str, description: str
+        self,
+        name: str,
+        value: str,
+        description: str,
     ) -> ssm.IStringParameter:
         parameter_namespace = Stack.of(self).stack_name
         return ssm.StringParameter(

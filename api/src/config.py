@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     dynamodb_endpoint: Optional[HttpUrl]
     dynamodb_table: str
 
+    root_path: Optional[str]
+
     class Config(AwsSsmSourceConfig):
         env_file = ".env"
 
