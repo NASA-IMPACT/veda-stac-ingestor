@@ -8,7 +8,7 @@ STAC items are validated to ensure that:
 1. All assets are accessible
 1. Its collection exists
 
-![architecture diagram](.readme/architecture.png)
+![architecture diagram](.readme/architecture.svg)
 
 ## Development
 
