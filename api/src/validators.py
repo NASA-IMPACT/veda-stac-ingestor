@@ -1,3 +1,4 @@
+import boto3
 import requests
 
 
@@ -5,8 +6,13 @@ def s3_object_is_accessible(bucket: str, key: str):
     """
     Ensure we can send HEAD requests to S3 objects.
     """
-    # TODO: Validate S3
-    raise ValueError("S3 urls not currrently supported")
+    client = boto3.client("s3")
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+    except client.exceptions.ClientError as e:
+        raise ValueError(
+            f"Asset not accessible: {e.__dict__['response']['Error']['Message']}"
+        )
 
 
 def url_is_accessible(href: str):
@@ -17,6 +23,5 @@ def url_is_accessible(href: str):
         requests.head(href).raise_for_status()
     except requests.exceptions.HTTPError as e:
         raise ValueError(
-            "Asset href not accessible: "
-            f"{e.response.status_code} {e.response.reason}"
+            f"Asset not accessible: {e.response.status_code} {e.response.reason}"
         )
