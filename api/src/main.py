@@ -1,9 +1,15 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException
 
 from . import schemas, dependencies, services, config
 
 
-app = FastAPI(root_path=config.settings.root_path)
+stage = os.environ.get("STAGE", "dev")
+stack_name = f"veda-stac-ingestion-system-{stage}"
+parameter_store_prefix = f"/{stack_name}"
+settings = config.Settings(_secrets_dir=parameter_store_prefix)
+
+app = FastAPI(root_path=settings.root_path)
 
 
 @app.get(
