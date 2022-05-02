@@ -1,5 +1,3 @@
-from decimal import Decimal
-import json
 from typing import TYPE_CHECKING, List
 
 from boto3.dynamodb import conditions
@@ -16,8 +14,7 @@ class Database:
         self.table = table
 
     def write(self, ingestion: schemas.Ingestion):
-        data = json.loads(ingestion.json(), parse_float=Decimal)
-        self.table.put_item(Item=data)
+        self.table.put_item(Item=ingestion.dynamodb_dict())
 
     def fetch_one(self, username: str, ingestion_id: str):
         response = self.table.get_item(

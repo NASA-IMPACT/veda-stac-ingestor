@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 import enum
 import json
 import binascii
@@ -76,6 +77,10 @@ class Ingestion(BaseModel):
         self.updated_at = datetime.now()
         db.write(self)
         return self
+
+    def dynamodb_dict(self, by_alias=True):
+        """DynamoDB-friendly serialization"""
+        return json.loads(self.json(by_alias=by_alias), parse_float=Decimal)
 
 
 class S3Details(BaseModel):
