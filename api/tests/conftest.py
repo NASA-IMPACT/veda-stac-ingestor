@@ -1,13 +1,34 @@
-from unittest.mock import MagicMock
-import json
+import os
 
+import boto3
 import pytest
 from fastapi.testclient import TestClient
 from stac_pydantic import Item
+from moto import mock_dynamodb, mock_ssm
 
 
 @pytest.fixture
-def app():
+def test_environ():
+    # Mocked AWS Credentials for moto (best practice recommendation from moto)
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+    os.environ["AWS_SECURITY_TOKEN"] = "testing"
+    os.environ["AWS_SESSION_TOKEN"] = "testing"
+
+    # Config mocks
+    os.environ["S3_ROLE_ARN"] = "testing_arn"
+    os.environ["S3_UPLOAD_BUCKET"] = "test_bucket"
+    os.environ["DYNAMODB_TABLE"] = "test_table"
+
+
+@pytest.fixture
+def mock_ssm_parameter_store():
+    with mock_ssm():
+        yield boto3.client("ssm")
+
+
+@pytest.fixture
+def app(test_environ, mock_ssm_parameter_store):
     from src.main import app
 
     return app
@@ -19,12 +40,38 @@ def api_client(app):
 
 
 @pytest.fixture
-def mock_table(app):
-    from src import dependencies
+def mock_table(app, test_environ):
+    from src import dependencies, main
 
-    mock_table = MagicMock()
-    app.dependency_overrides[dependencies.get_table] = lambda: mock_table
-    return mock_table
+    with mock_dynamodb():
+        client = boto3.resource("dynamodb")
+        mock_table = client.create_table(
+            TableName=main.settings.dynamodb_table,
+            AttributeDefinitions=[
+                {"AttributeName": "created_by", "AttributeType": "S"},
+                {"AttributeName": "id", "AttributeType": "S"},
+                {"AttributeName": "status", "AttributeType": "S"},
+                {"AttributeName": "created_at", "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "created_by", "KeyType": "HASH"},
+                {"AttributeName": "id", "KeyType": "RANGE"},
+            ],
+            BillingMode="PAY_PER_REQUEST",
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "status",
+                    "KeySchema": [
+                        {"AttributeName": "status", "KeyType": "HASH"},
+                        {"AttributeName": "created_at", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                }
+            ],
+        )
+        app.dependency_overrides[dependencies.get_table] = lambda: mock_table
+        yield mock_table
+        app.dependency_overrides.pop(dependencies.get_table)
 
 
 @pytest.fixture
@@ -95,11 +142,9 @@ def example_stac_item():
 def example_ingestion(example_stac_item):
     from src import schemas
 
-    return json.loads(
-        schemas.Ingestion(
-            id=example_stac_item["id"],
-            created_by="test-user",
-            status=schemas.Status.queued,
-            item=Item.parse_obj(example_stac_item),
-        ).json(by_alias=True)
+    return schemas.Ingestion(
+        id=example_stac_item["id"],
+        created_by="test-user",
+        status=schemas.Status.queued,
+        item=Item.parse_obj(example_stac_item),
     )
