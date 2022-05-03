@@ -1,7 +1,7 @@
 from datetime import timedelta
 import json
 import base64
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import pytest
 
@@ -25,6 +25,16 @@ class TestList:
         self.mock_table = mock_table
         self.example_ingestion = example_ingestion
 
+    def populate_table(self, count=100) -> List["schemas.Ingestion"]:
+        example_ingestions = []
+        for i in range(count):
+            ingestion = self.example_ingestion.copy()
+            ingestion.id = str(i)
+            ingestion.created_at = ingestion.created_at + timedelta(hours=i)
+            self.mock_table.put_item(Item=ingestion.dynamodb_dict())
+            example_ingestions.append(ingestion)
+        return example_ingestions
+
     def test_simple_lookup(self):
         self.mock_table.put_item(Item=self.example_ingestion.dynamodb_dict())
 
@@ -36,13 +46,7 @@ class TestList:
         }
 
     def test_next_response(self):
-        example_ingestions = []
-        for i in range(100):
-            ingestion = self.example_ingestion.copy()
-            ingestion.id = str(i)
-            ingestion.created_at = ingestion.created_at + timedelta(hours=i)
-            self.mock_table.put_item(Item=ingestion.dynamodb_dict())
-            example_ingestions.append(ingestion)
+        example_ingestions = self.populate_table(100)
 
         limit = 25
         expected_next = json.loads(
@@ -60,13 +64,7 @@ class TestList:
         ]
 
     def test_get_next_page(self):
-        example_ingestions = []
-        for i in range(100):
-            ingestion = self.example_ingestion.copy()
-            ingestion.id = str(i)
-            ingestion.created_at = ingestion.created_at + timedelta(hours=i)
-            self.mock_table.put_item(Item=ingestion.dynamodb_dict())
-            example_ingestions.append(ingestion)
+        example_ingestions = self.populate_table(100)
 
         limit = 25
         next_param = base64.b64encode(
