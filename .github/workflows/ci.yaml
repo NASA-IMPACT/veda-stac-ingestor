@@ -33,3 +33,13 @@ jobs:
       - name: Run Tests
         run: |
           pytest
+      
+      - name: Run Linters
+        uses: wearerequired/lint-action@v2
+        with:
+          black: true
+          black_args: api cdk
+          flake8: true
+          flake8_args: api cdk
+          isort: true
+          isort_args: api cdk

@@ -1,7 +1,7 @@
 import boto3
 from fastapi import Depends, HTTPException, security
 
-from . import services, config
+from . import config, services
 
 authentication = security.HTTPBasic()
 

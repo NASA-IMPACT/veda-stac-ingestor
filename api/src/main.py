@@ -1,8 +1,8 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException
 
-from . import schemas, dependencies, services, config
+from fastapi import Depends, FastAPI, HTTPException
 
+from . import config, dependencies, schemas, services
 
 stage = os.environ.get("STAGE", "dev")
 stack_name = f"veda-stac-ingestion-system-{stage}"

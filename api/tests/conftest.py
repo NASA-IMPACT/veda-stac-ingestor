@@ -3,8 +3,8 @@ import os
 import boto3
 import pytest
 from fastapi.testclient import TestClient
-from stac_pydantic import Item
 from moto import mock_dynamodb, mock_ssm
+from stac_pydantic import Item
 
 
 @pytest.fixture
@@ -123,13 +123,13 @@ def example_stac_item():
         ],
         "assets": {
             "visual": {
-                "href": "https://storage.googleapis.com/open-cogs/stac-examples/20201211_223832_CS2.tif",
+                "href": "https://storage.googleapis.com/open-cogs/stac-examples/20201211_223832_CS2.tif",  # noqa
                 "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                 "title": "3-Band Visual",
                 "roles": ["visual"],
             },
             "thumbnail": {
-                "href": "https://storage.googleapis.com/open-cogs/stac-examples/20201211_223832_CS2.jpg",
+                "href": "https://storage.googleapis.com/open-cogs/stac-examples/20201211_223832_CS2.jpg",  # noqa
                 "title": "Thumbnail",
                 "type": "image/jpeg",
                 "roles": ["thumbnail"],

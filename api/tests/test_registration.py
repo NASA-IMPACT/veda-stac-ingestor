@@ -1,14 +1,13 @@
-from datetime import timedelta
-import json
 import base64
+import json
+from datetime import timedelta
 from typing import TYPE_CHECKING, List
 
 import pytest
 
-
 if TYPE_CHECKING:
-    from src import schemas, services
     from fastapi.testclient import TestClient
+    from src import schemas, services
 
 ingestion_endpoint = "/ingestions"
 
