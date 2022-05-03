@@ -6,8 +6,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    env: 
+
+    env:
       AWS_DEFAULT_REGION: us-west-2
 
     steps:
@@ -33,7 +33,7 @@ jobs:
       - name: Run Tests
         run: |
           pytest
-      
+
       - name: Run Linters
         uses: wearerequired/lint-action@v2
         with:
