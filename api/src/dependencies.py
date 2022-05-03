@@ -1,7 +1,7 @@
 import boto3
 from fastapi import Depends, HTTPException, security
 
-from . import services, config
+from . import config, services
 
 authentication = security.HTTPBasic()
 
@@ -10,9 +10,13 @@ def get_username(credentials: security.HTTPBasicCredentials = Depends(authentica
     return credentials.username
 
 
-def get_db() -> services.Database:
+def get_table():
     client = boto3.resource("dynamodb")
-    return services.Database(table=client.Table(config.settings.dynamodb_table))
+    return client.Table(config.settings.dynamodb_table)
+
+
+def get_db(table=Depends(get_table)) -> services.Database:
+    return services.Database(table=table)
 
 
 def fetch_ingestion(

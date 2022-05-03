@@ -1,14 +1,14 @@
-from datetime import datetime
-from decimal import Decimal
+import base64
+import binascii
 import enum
 import json
-import binascii
-import base64
+from datetime import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING, Dict, List, Optional
 from urllib.parse import urlparse
-from typing import Dict, List, Optional, TYPE_CHECKING
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, PositiveInt, validator, dataclasses, error_wrappers
+from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator
 from stac_pydantic import Item, shared
 
 from . import validators

@@ -1,4 +1,5 @@
 from typing import Optional
+
 from pydantic import BaseSettings
 from pydantic_ssm_settings import AwsSsmSourceConfig
 
