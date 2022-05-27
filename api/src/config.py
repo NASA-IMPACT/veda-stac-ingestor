@@ -12,5 +12,7 @@ class Settings(BaseSettings):
 
     root_path: Optional[str]
 
+    cognito_user_pool_id: str = "us-east-1_Wt2sA2K9e"
+
     class Config(AwsSsmSourceConfig):
         env_file = ".env"

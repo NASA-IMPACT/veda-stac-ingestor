@@ -1,13 +1,41 @@
+from functools import lru_cache
+
 import boto3
+import requests
+from authlib.jose import JsonWebToken, JsonWebKey, KeySet, JWTClaims
 from fastapi import Depends, HTTPException, security
 
 from . import config, services
 
-authentication = security.HTTPBasic()
+authentication = security.HTTPBearer()
 
 
-def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
-    return credentials.username
+def get_settings() -> config.Settings:
+    return config.settings
+
+
+def get_jwks_url(settings=Depends(get_settings)) -> str:
+    pool_id = settings.cognito_user_pool_id
+    region = pool_id.split("_")[0]
+    return f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
+
+
+@lru_cache
+def get_jwks(url: str = Depends(get_jwks_url)) -> KeySet:
+    with requests.get(url) as response:
+        response.raise_for_status()
+        return JsonWebKey.import_key_set(response.json())
+
+
+def validate_token(
+    jwk: security.HTTPAuthorizationCredentials = Depends(authentication),
+    jwks: KeySet = Depends(get_jwks),
+) -> JWTClaims:
+    return JsonWebToken().decode(s=jwk.credentials, key=jwks)
+
+
+def get_username(claims: security.HTTPBasicCredentials = Depends(validate_token)):
+    return claims["sub"]
 
 
 def get_table():
