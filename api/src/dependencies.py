@@ -4,6 +4,9 @@ from fastapi import Depends, HTTPException, security
 from . import config, services
 
 authentication = security.HTTPBasic()
+def get_settings() -> config.Settings:
+    return config.settings
+
 
 
 def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
@@ -32,12 +35,12 @@ def fetch_ingestion(
         )
 
 
-def get_credentials_role_arn():
-    return config.settings.s3_role_arn
+def get_credentials_role_arn(settings=Depends(get_settings)):
+    return settings.s3_role_arn
 
 
-def get_upload_bucket() -> str:
-    return config.settings.s3_upload_bucket
+def get_upload_bucket(settings=Depends(get_settings)) -> str:
+    return settings.s3_upload_bucket
 
 
 def get_credentials(
