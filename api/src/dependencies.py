@@ -32,12 +32,12 @@ def fetch_ingestion(
         )
 
 
-def get_credentials_role_arn():
-    return config.settings.s3_role_arn
+def get_credentials_role_arn(settings=Depends(get_settings)):
+    return settings.s3_role_arn
 
 
-def get_upload_bucket() -> str:
-    return config.settings.s3_upload_bucket
+def get_upload_bucket(settings=Depends(get_settings)) -> str:
+    return settings.s3_upload_bucket
 
 
 def get_credentials(
