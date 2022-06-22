@@ -17,9 +17,13 @@ def get_settings() -> config.Settings:
     return config.settings
 
 
+def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
+    return settings.jwks_url
+
+
 @cached(TTLCache(maxsize=1, ttl=3600))
-def get_jwks(settings: config.Settings = Depends(get_settings)) -> KeySet:
-    with requests.get(settings.jwks_url) as response:
+def get_jwks(jwks_url: str = Depends(get_jwks_url)) -> KeySet:
+    with requests.get(jwks_url) as response:
         response.raise_for_status()
         return JsonWebKey.import_key_set(response.json())
 
