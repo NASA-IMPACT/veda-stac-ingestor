@@ -12,14 +12,6 @@ settings = config.Settings(_secrets_dir=parameter_store_prefix)
 app = FastAPI(root_path=settings.root_path)
 
 
-@app.get("/auth/me")
-def who_am_i(user=Depends(dependencies.validate_token)):
-    """
-    Return claims for the provided JWT
-    """
-    return user
-
-
 @app.get(
     "/ingestions", response_model=schemas.ListIngestionResponse, tags=["Ingestion"]
 )
@@ -117,3 +109,11 @@ def get_temporary_credentials(
             "aws_session_token": credentials["Credentials"]["SessionToken"],
         },
     }
+
+
+@app.get("/auth/me")
+def who_am_i(claims=Depends(dependencies.decode_token)):
+    """
+    Return claims for the provided JWT
+    """
+    return claims
