@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-import os
 import aws_cdk as cdk
 
-from cdk.stack import StacIngestionSystem
+from cdk import config, stack
 
-stage = os.environ.get("STAGE", "dev")
 
+deployment = config.Deployment(_env_file=".env")
 
 app = cdk.App()
-StacIngestionSystem(
+
+stack.StacIngestionApi(
     app,
-    f"veda-stac-ingestion-system-{stage}",
-    stage=stage,
+    construct_id=deployment.get_stack_name("api"),
+    config=deployment,
+    tags={
+        "Project": "veda",
+        "Owner": deployment.owner,
+        "Client": "nasa-impact",
+        "Stack": deployment.stage,
+    },
+    env=cdk.Environment(region="us-west-2"),
 )
-
-# Tag infrastructure
-for key, value in {
-    "Project": "veda",
-    "Owner": os.environ.get("OWNER", "alukach"),
-    "Client": "nasa-impact",
-    "Stack": stage,
-}.items():
-    cdk.Tags.of(app).add(key, value, apply_to_launched_instances=True)
-
 
 app.synth()
