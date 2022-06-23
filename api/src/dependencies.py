@@ -39,7 +39,7 @@ def decode_token(
         claims = JsonWebToken(["RS256"]).decode(
             s=token.credentials,
             key=jwks,
-            claim_options={
+            claims_options={
                 # # Example of validating audience to match expected value
                 # "aud": {"essential": True, "values": [APP_CLIENT_ID]}
             },
@@ -50,6 +50,7 @@ def decode_token(
             claims.setdefault("aud", claims["client_id"])
 
         claims.validate()
+        return claims
     except errors.JoseError:  #
         logger.exception("Unable to decode token")
         raise HTTPException(status_code=403, detail="Bad auth token")
