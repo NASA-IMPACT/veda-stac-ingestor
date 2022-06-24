@@ -1,6 +1,7 @@
 fastapi>=0.75.1
 stac-pydantic>=2.0.2
 pydantic>=1.9.0
+pypgstac==0.6.6
 requests>=2.27.1
 git+https://github.com/developmentseed/pydantic-ssm-settings@main
 mangum>=0.15.0
