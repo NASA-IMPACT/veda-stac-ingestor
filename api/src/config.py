@@ -5,9 +5,6 @@ from pydantic_ssm_settings import AwsSsmSourceConfig
 
 
 class Settings(BaseSettings):
-    s3_role_arn: str
-    s3_upload_bucket: str
-
     dynamodb_table: str
 
     root_path: Optional[str]
