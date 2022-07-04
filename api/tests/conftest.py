@@ -19,6 +19,7 @@ def test_environ():
     os.environ["S3_ROLE_ARN"] = "testing_arn"
     os.environ["S3_UPLOAD_BUCKET"] = "test_bucket"
     os.environ["DYNAMODB_TABLE"] = "test_table"
+    os.environ["JWKS_URL"] = "https://test-jwks.url"
 
 
 @pytest.fixture
@@ -46,7 +47,7 @@ def mock_table(app, test_environ):
     with mock_dynamodb():
         client = boto3.resource("dynamodb")
         mock_table = client.create_table(
-            TableName=main.settings.dynamodb_table,
+            TableName=main.config.settings.dynamodb_table,
             AttributeDefinitions=[
                 {"AttributeName": "created_by", "AttributeType": "S"},
                 {"AttributeName": "id", "AttributeType": "S"},
