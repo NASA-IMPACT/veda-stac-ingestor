@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 from pydantic import BaseSettings
@@ -16,8 +15,6 @@ class Settings(BaseSettings):
     class Config(AwsSsmSourceConfig):
         env_file = ".env"
 
-
-stage = os.environ.get("STAGE", "dev")
-stack_name = f"veda-stac-ingestion-system-{stage}"
-parameter_store_prefix = f"/{stack_name}"
-settings = Settings(_secrets_dir=parameter_store_prefix)
+    @classmethod
+    def from_ssm(cls, stack: str):
+        return cls(_secrets_dir=f"/{stack}")
