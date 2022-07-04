@@ -8,7 +8,7 @@ import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
 
-from api.src.dependencies import get_db, get_table
+from api.src.dependencies import get_table
 
 from .schemas import Ingestion, Status
 
@@ -42,7 +42,7 @@ class DbCreds(pydantic.BaseModel):
 
     @property
     def dsn_string(self) -> str:
-        return f"{self.engine}://{self.username}:{self.password}@{self.host}:{self.port}/{self.dbname}"
+        return f"{self.engine}://{self.username}:{self.password}@{self.host}:{self.port}/{self.dbname}"  # noqa
 
 
 def get_db_credentials(secret_arn: str) -> DbCreds:
@@ -62,7 +62,8 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     # Insert into PgSTAC DB
     loader.load_items(
         file=[i.item for i in ingestions],
-        insert_mode=Methods.insert_ignore,  # use insert_ignore to avoid overwritting existing items or upsert to replace
+        # use insert_ignore to avoid overwritting existing items or upsert to replace
+        insert_mode=Methods.insert_ignore,
     )
 
     # Update records in DynamoDB
