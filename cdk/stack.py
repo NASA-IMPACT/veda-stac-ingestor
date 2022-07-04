@@ -173,6 +173,9 @@ class StacIngestionSystem(Stack):
             description="Allow connections from STAC Ingestor",
         )
 
+        # Allow handler to write results back to DBƒ
+        table.grant_write_data(handler)
+
         # Trigger handler from writes to DynamoDB table
         handler.add_event_source(
             events.DynamoEventSource(

@@ -1,11 +1,14 @@
+from datetime import datetime
 import os
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Iterator, List
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
+
+from api.src.dependencies import get_db, get_table
 
 from .schemas import Ingestion, Status
 
@@ -17,7 +20,7 @@ if TYPE_CHECKING:
 deserializer = TypeDeserializer()
 
 
-def get_queued_items(records: List["DynamodbRecord"]):
+def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
     for record in records:
         # Parse Record
         parsed = {
@@ -26,7 +29,7 @@ def get_queued_items(records: List["DynamodbRecord"]):
         }
         ingestion = Ingestion.construct(**parsed)
         if ingestion.status == Status.queued:
-            yield ingestion.item
+            yield ingestion
 
 
 class DbCreds(pydantic.BaseModel):
@@ -54,14 +57,24 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     db = PgstacDB(dsn=db_creds.dsn_string, debug=True)
     loader = Loader(db=db)
 
-    items = list(get_queued_items(event["Records"]))
+    ingestions = list(get_queued_ingestions(event["Records"]))
 
+    # Insert into PgSTAC DB
     loader.load_items(
-        file=items,
+        file=[i.item for i in ingestions],
         insert_mode=Methods.insert_ignore,  # use insert_ignore to avoid overwritting existing items or upsert to replace
     )
 
-    for item in items:
-        print(f"TODO: Mark as ingested {item=}")
+    # Update records in DynamoDB
+    with get_table().batch_writer() as batch:
+        for ingestion in ingestions:
+            batch.put_item(
+                Item=ingestion.copy(
+                    update={
+                        "status": Status.succeeded,
+                        "updated_at": datetime.now(),
+                    }
+                ).json()
+            )
 
     return {"statusCode": 200, "body": "Done"}
