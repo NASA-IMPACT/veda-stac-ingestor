@@ -32,6 +32,10 @@ def fetch_ingestion(
         )
 
 
+def get_settings():
+    return config.settings
+
+
 def get_credentials_role_arn(settings=Depends(get_settings)):
     return settings.s3_role_arn
 
