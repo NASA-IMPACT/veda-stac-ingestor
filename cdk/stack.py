@@ -15,10 +15,17 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+from .config import Deployment
+
 
 class StacIngestionSystem(Stack):
     def __init__(
-        self, scope: Construct, construct_id: str, stage: str, **kwargs
+        self,
+        scope: Construct,
+        construct_id: str,
+        stage: str,
+        config: Deployment,
+        **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
         table = self.build_table()
