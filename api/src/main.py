@@ -1,3 +1,6 @@
+import os
+from getpass import getuser
+
 from fastapi import Depends, FastAPI, HTTPException
 
 from . import config, dependencies, schemas, services

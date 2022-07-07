@@ -3,9 +3,12 @@ from aws_cdk import (
     RemovalPolicy,
     Stack,
     aws_apigateway as apigateway,
+    aws_ec2 as ec2,
+    aws_events as events,
     aws_dynamodb as dynamodb,
     aws_lambda_python_alpha,
     aws_lambda,
+    aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
 )
 from constructs import Construct
@@ -18,7 +21,6 @@ class StacIngestionApi(Stack):
         self,
         scope: Construct,
         construct_id: str,
-        stage: str,
         config: Deployment,
         **kwargs,
     ) -> None:
