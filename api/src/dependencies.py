@@ -80,22 +80,3 @@ def fetch_ingestion(
         raise HTTPException(
             status_code=404, detail="No ingestion found with provided ID"
         )
-
-
-def get_credentials_role_arn():
-    return config.settings.s3_role_arn
-
-
-def get_upload_bucket() -> str:
-    return config.settings.s3_upload_bucket
-
-
-def get_credentials(
-    role_arn=Depends(get_credentials_role_arn), username=Depends(get_username)
-):
-    client = boto3.client("sts")
-    return client.assume_role(
-        RoleArn=role_arn,
-        RoleSessionName=username,
-        DurationSeconds=15 * 60,
-    )

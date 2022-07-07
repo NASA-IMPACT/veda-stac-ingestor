@@ -1,14 +1,15 @@
 import os
+from getpass import getuser
 
 from fastapi import Depends, FastAPI, HTTPException
 
 from . import config, dependencies, schemas, services
 
-stage = os.environ.get("STAGE", "dev")
-stack_name = f"veda-stac-ingestion-system-{stage}"
-parameter_store_prefix = f"/{stack_name}"
-settings = config.Settings(_secrets_dir=parameter_store_prefix)
-
+settings = config.Settings.from_ssm(
+    stack=os.environ.get(
+        "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
+    ),
+)
 app = FastAPI(root_path=settings.root_path)
 
 
@@ -75,40 +76,6 @@ def cancel_ingestion(
             ),
         )
     return ingestion.cancel(db)
-
-
-@app.get("/creds", response_model=schemas.TemporaryCredentials, tags=["Data"])
-def get_temporary_credentials(
-    bucket_name: str = Depends(dependencies.get_upload_bucket),
-    credentials=Depends(dependencies.get_credentials),
-):
-    """
-    Get credentials to allow access to an S3 prefix.
-    ```py
-    import boto3
-    import requests
-
-    api_endpoint = "TODO: Put ingestion API host here"
-    response = requests.get(f"https://{api_endpoint}/creds").json()
-    s3 = boto3.client("s3", **response['credentials'])
-    s3.put_object(
-        Bucket=response['s3']['bucket'],
-        Key=f"{response['s3']['prefix']}/my-file",
-        Body="🚀"
-    )
-    ```
-    """
-    return {
-        "s3": {
-            "bucket": bucket_name,
-            "prefix": credentials["AssumedRoleUser"]["AssumedRoleId"],
-        },
-        "credentials": {
-            "aws_access_key_id": credentials["Credentials"]["AccessKeyId"],
-            "aws_secret_access_key": credentials["Credentials"]["SecretAccessKey"],
-            "aws_session_token": credentials["Credentials"]["SessionToken"],
-        },
-    }
 
 
 @app.get("/auth/me")
