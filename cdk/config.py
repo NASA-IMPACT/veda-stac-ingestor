@@ -24,6 +24,8 @@ class Deployment(BaseSettings):
         default_factory=getuser,
     )
 
+    userpool_id: str = Field(description="The Cognito Userpool used for authentication")
+
     stac_db_secret_name: str = Field(
         description="Name of secret containing pgSTAC DB connection information"
     )

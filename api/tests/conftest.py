@@ -19,6 +19,7 @@ def test_environ():
     os.environ["S3_ROLE_ARN"] = "testing_arn"
     os.environ["S3_UPLOAD_BUCKET"] = "test_bucket"
     os.environ["DYNAMODB_TABLE"] = "test_table"
+    os.environ["JWKS_URL"] = "https://test-jwks.url"
 
 
 @pytest.fixture

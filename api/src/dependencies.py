@@ -1,13 +1,63 @@
+import logging
+
 import boto3
+import requests
+from authlib.jose import JsonWebToken, JsonWebKey, KeySet, JWTClaims, errors
+from cachetools import cached, TTLCache
 from fastapi import Depends, HTTPException, security
 
 from . import config, services
 
-authentication = security.HTTPBasic()
+logger = logging.getLogger(__name__)
+
+token_scheme = security.HTTPBearer()
 
 
-def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
-    return credentials.username
+def get_settings() -> config.Settings:
+    return config.settings
+
+
+def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
+    return settings.jwks_url
+
+
+@cached(TTLCache(maxsize=1, ttl=3600))
+def get_jwks(jwks_url: str = Depends(get_jwks_url)) -> KeySet:
+    with requests.get(jwks_url) as response:
+        response.raise_for_status()
+        return JsonWebKey.import_key_set(response.json())
+
+
+def decode_token(
+    token: security.HTTPAuthorizationCredentials = Depends(token_scheme),
+    jwks: KeySet = Depends(get_jwks),
+) -> JWTClaims:
+    """
+    Validate & decode JWT
+    """
+    try:
+        claims = JsonWebToken(["RS256"]).decode(
+            s=token.credentials,
+            key=jwks,
+            claims_options={
+                # # Example of validating audience to match expected value
+                # "aud": {"essential": True, "values": [APP_CLIENT_ID]}
+            },
+        )
+
+        if "client_id" in claims:
+            # Insert Cognito's `client_id` into `aud` claim if `aud` claim is unset
+            claims.setdefault("aud", claims["client_id"])
+
+        claims.validate()
+        return claims
+    except errors.JoseError:  #
+        logger.exception("Unable to decode token")
+        raise HTTPException(status_code=403, detail="Bad auth token")
+
+
+def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
+    return claims["sub"]
 
 
 def get_table():
@@ -30,26 +80,3 @@ def fetch_ingestion(
         raise HTTPException(
             status_code=404, detail="No ingestion found with provided ID"
         )
-
-
-def get_settings():
-    return config.settings
-
-
-def get_credentials_role_arn(settings=Depends(get_settings)):
-    return settings.s3_role_arn
-
-
-def get_upload_bucket(settings=Depends(get_settings)) -> str:
-    return settings.s3_upload_bucket
-
-
-def get_credentials(
-    role_arn=Depends(get_credentials_role_arn), username=Depends(get_username)
-):
-    client = boto3.client("sts")
-    return client.assume_role(
-        RoleArn=role_arn,
-        RoleSessionName=username,
-        DurationSeconds=15 * 60,
-    )

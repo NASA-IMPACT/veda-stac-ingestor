@@ -83,22 +83,6 @@ class Ingestion(BaseModel):
         return json.loads(self.json(by_alias=by_alias), parse_float=Decimal)
 
 
-class S3Details(BaseModel):
-    bucket: str
-    prefix: str
-
-
-class AwsCredentials(BaseModel):
-    aws_access_key_id: str
-    aws_secret_access_key: str
-    aws_session_token: str
-
-
-class TemporaryCredentials(BaseModel):
-    s3: S3Details
-    credentials: AwsCredentials
-
-
 @dataclasses.dataclass
 class ListIngestionRequest:
     status: Status = Status.queued

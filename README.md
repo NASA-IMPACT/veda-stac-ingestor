@@ -12,6 +12,10 @@ STAC items are validated to ensure that:
 
 ## Development
 
+### Configuration
+
+This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmentseed/pydantic-ssm-settings) module to attempt to load configuration from [AWS SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html).
+
 ### Running API
 
 1. Create virtual environment:
