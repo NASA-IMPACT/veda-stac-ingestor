@@ -47,7 +47,7 @@ def mock_table(app, test_environ):
     with mock_dynamodb():
         client = boto3.resource("dynamodb")
         mock_table = client.create_table(
-            TableName=main.config.settings.dynamodb_table,
+            TableName=main.settings.dynamodb_table,
             AttributeDefinitions=[
                 {"AttributeName": "created_by", "AttributeType": "S"},
                 {"AttributeName": "id", "AttributeType": "S"},
