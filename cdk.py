@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import aws_cdk as cdk
+import aws_cdk
 
 from cdk import config, stack
 
 
 deployment = config.Deployment(_env_file=".env")
 
-app = cdk.App()
+app = aws_cdk.App()
 
 stack.StacIngestionApi(
     app,
@@ -18,7 +18,7 @@ stack.StacIngestionApi(
         "Client": "nasa-impact",
         "Stack": deployment.stage,
     },
-    env=cdk.Environment(region="us-west-2"),
+    env=deployment.env,
 )
 
 app.synth()

@@ -1,4 +1,6 @@
 from getpass import getuser
+
+import aws_cdk
 from pydantic import BaseSettings, Field
 
 
@@ -24,6 +26,16 @@ class Deployment(BaseSettings):
         default_factory=getuser,
     )
 
+    aws_account: str = Field(
+        description="AWS account used for deployment",
+        env="CDK_DEFAULT_ACCOUNT",
+    )
+    aws_region: str = Field(
+        default="us-west-2",
+        description="AWS region used for deployment",
+        env="CDK_DEFAULT_REGION",
+    )
+
     userpool_id: str = Field(description="The Cognito Userpool used for authentication")
 
     stac_db_secret_name: str = Field(
@@ -41,3 +53,10 @@ class Deployment(BaseSettings):
     @property
     def stack_name(self) -> str:
         return f"veda-stac-ingestion-{self.stage}"
+
+    @property
+    def env(self) -> aws_cdk.Environment:
+        return aws_cdk.Environment(
+            account=self.aws_account,
+            region=self.aws_region,
+        )
