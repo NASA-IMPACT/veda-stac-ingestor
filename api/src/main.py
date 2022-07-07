@@ -76,3 +76,11 @@ def cancel_ingestion(
             ),
         )
     return ingestion.cancel(db)
+
+
+@app.get("/auth/me")
+def who_am_i(claims=Depends(dependencies.decode_token)):
+    """
+    Return claims for the provided JWT
+    """
+    return claims

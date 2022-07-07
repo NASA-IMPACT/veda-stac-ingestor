@@ -9,26 +9,47 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+from .config import Deployment
 
-class StacIngestionSystem(Stack):
+
+class StacIngestionApi(Stack):
     def __init__(
-        self, scope: Construct, construct_id: str, stage: str, **kwargs
+        self,
+        scope: Construct,
+        construct_id: str,
+        config: Deployment,
+        **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         table = self.build_table()
+        jwks_url = self.build_jwks_url(config.userpool_id)
         handler = self.build_lambda(
             table=table,
-            stage=stage,
+            stage=config.stage,
+            jwks_url=jwks_url,
         )
         self.build_api(
             handler=handler,
-            stage=stage,
+            stage=config.stage,
+        )
+
+        self.register_ssm_parameter(
+            name="jwks_url",
+            value=jwks_url,
+            description="JWKS URL for Cognito user pool",
         )
         self.register_ssm_parameter(
             name="dynamodb_table",
             value=table.table_name,
             description="Name of table used to store ingestions",
+        )
+
+    def build_jwks_url(self, userpool_id: str) -> str:
+        region = userpool_id.split("_")[0]
+        return (
+            f"https://cognito-idp.{region}.amazonaws.com"
+            f"/{userpool_id}/.well-known/jwks.json"
         )
 
     def build_table(self) -> dynamodb.ITable:
@@ -52,6 +73,7 @@ class StacIngestionSystem(Stack):
         *,
         table: dynamodb.ITable,
         stage: str,
+        jwks_url: str,
     ) -> apigateway.LambdaRestApi:
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
@@ -61,6 +83,7 @@ class StacIngestionSystem(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             environment={
                 "DYNAMODB_TABLE": table.table_name,
+                "JWKS_URL": jwks_url,
                 "ROOT_PATH": f"/{stage}",
             },
         )
