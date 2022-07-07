@@ -4,10 +4,10 @@ from aws_cdk import (
     Stack,
     aws_apigateway as apigateway,
     aws_ec2 as ec2,
-    aws_events as events,
     aws_dynamodb as dynamodb,
-    aws_lambda_python_alpha,
     aws_lambda,
+    aws_lambda_event_sources as events,
+    aws_lambda_python_alpha,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
 )
@@ -36,6 +36,7 @@ class StacIngestionApi(Stack):
             handler=handler,
             stage=config.stage,
         )
+
         self.build_ingestor(
             table=table,
             db_secret=self.get_db_secret(config.stac_db_secret_name),
@@ -172,6 +173,11 @@ class StacIngestionApi(Stack):
             handler=handler,
             cloud_watch_role=True,
             deploy_options=apigateway.StageOptions(stage_name=stage),
+        )
+
+    def get_db_secret(self, secret_name: str) -> secretsmanager.ISecret:
+        return secretsmanager.Secret.from_secret_name_v2(
+            self, "pgstac-db-secret", secret_name
         )
 
     def register_ssm_parameter(
