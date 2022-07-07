@@ -26,7 +26,7 @@ class StacIngestionApi(Stack):
         jwks_url = self.build_jwks_url(config.userpool_id)
         handler = self.build_lambda(
             table=table,
-            stage=stage,
+            stage=config.stage,
             jwks_url=jwks_url,
         )
         self.build_api(
