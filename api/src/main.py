@@ -1,14 +1,15 @@
 import os
+from getpass import getuser
 
 from fastapi import Depends, FastAPI, HTTPException
 
 from . import config, dependencies, schemas, services
 
-stage = os.environ.get("STAGE", "dev")
-stack_name = f"veda-stac-ingestion-system-{stage}"
-parameter_store_prefix = f"/{stack_name}"
-settings = config.Settings(_secrets_dir=parameter_store_prefix)
-
+settings = config.Settings.from_ssm(
+    stack=os.environ.get(
+        "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
+    ),
+)
 app = FastAPI(root_path=settings.root_path)
 
 

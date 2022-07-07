@@ -11,3 +11,7 @@ class Settings(BaseSettings):
 
     class Config(AwsSsmSourceConfig):
         env_file = ".env"
+
+    @classmethod
+    def from_ssm(cls, stack: str):
+        return cls(_secrets_dir=f"/{stack}")

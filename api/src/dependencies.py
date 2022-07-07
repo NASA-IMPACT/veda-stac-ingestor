@@ -6,6 +6,10 @@ from . import config, services
 authentication = security.HTTPBasic()
 
 
+def get_settings() -> config.Settings:
+    return config.settings
+
+
 def get_username(credentials: security.HTTPBasicCredentials = Depends(authentication)):
     return credentials.username
 
