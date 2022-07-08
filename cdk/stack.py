@@ -1,3 +1,4 @@
+from typing import Dict
 from aws_cdk import (
     Duration,
     RemovalPolicy,
@@ -27,10 +28,15 @@ class StacIngestionApi(Stack):
         super().__init__(scope, construct_id, **kwargs)
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
-        handler = self.build_lambda(
+        env = {
+            "DYNAMODB_TABLE": table.table_name,
+            "JWKS_URL": jwks_url,
+            "ROOT_PATH": f"/{config.stage}",
+            "NO_PYDANTIC_SSM_SETTINGS": "1",
+        }
+        handler = self.build_api_lambda(
             table=table,
-            stage=config.stage,
-            jwks_url=jwks_url,
+            env=env,
         )
         self.build_api(
             handler=handler,
@@ -39,6 +45,7 @@ class StacIngestionApi(Stack):
 
         self.build_ingestor(
             table=table,
+            env=env,
             db_secret=self.get_db_secret(config.stac_db_secret_name),
             db_vpc=ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id),
             db_security_group=ec2.SecurityGroup.from_security_group_id(
@@ -84,12 +91,11 @@ class StacIngestionApi(Stack):
         )
         return table
 
-    def build_lambda(
+    def build_api_lambda(
         self,
         *,
         table: dynamodb.ITable,
-        stage: str,
-        jwks_url: str,
+        env: Dict[str, str],
     ) -> apigateway.LambdaRestApi:
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
@@ -97,11 +103,8 @@ class StacIngestionApi(Stack):
             entry="api",
             index="src/handler.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
-            environment={
-                "DYNAMODB_TABLE": table.table_name,
-                "JWKS_URL": jwks_url,
-                "ROOT_PATH": f"/{stage}",
-            },
+            environment=env,
+            timeout=Duration.seconds(5),
         )
         table.grant_read_write_data(handler)
         return handler
@@ -110,19 +113,20 @@ class StacIngestionApi(Stack):
         self,
         *,
         table: dynamodb.ITable,
+        env: Dict[str, str],
         db_secret: secretsmanager.ISecret,
         db_vpc: ec2.IVpc,
         db_security_group: ec2.ISecurityGroup,
         db_subnet_public: bool,
     ) -> aws_lambda_python_alpha.PythonFunction:
-
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
             "stac-ingestor",
             entry="api",
             index="src/ingestor.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
-            environment={"DB_SECRET_ARN": db_secret.secret_arn},
+            timeout=Duration.seconds(180),
+            environment={"DB_SECRET_ARN": db_secret.secret_arn, **env},
             vpc=db_vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
