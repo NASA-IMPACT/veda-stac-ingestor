@@ -1,4 +1,5 @@
 import boto3
+import functools
 import requests
 
 
@@ -25,3 +26,23 @@ def url_is_accessible(href: str):
         raise ValueError(
             f"Asset not accessible: {e.response.status_code} {e.response.reason}"
         )
+
+
+@functools.cache
+def collection_exists(collection_id: str) -> bool:
+    """
+    Ensure collection exists in STAC
+    """
+    from .main import settings
+
+    url = "/".join(
+        f'{url.strip("/")}' for url in [settings.stac_url, "collections", collection_id]
+    )
+
+    if (response := requests.get(url)).ok:
+        return True
+
+    raise ValueError(
+        f"Invalid collection '{collection_id}', received "
+        f"{response.status_code} response code from STAC API"
+    )

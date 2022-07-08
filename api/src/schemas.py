@@ -40,20 +40,8 @@ class AccessibleItem(Item):
 
     @validator("collection")
     def exists(cls, collection):
-        from .main import settings
-
-        url = "/".join(
-            f'{url.strip("/")}'
-            for url in [settings.stac_url, "collections", collection]
-        )
-
-        if (response := requests.get(url)).ok:
-            return collection
-
-        raise ValueError(
-            f"Invalid collection '{collection}', received "
-            f"{response.status_code} from STAC"
-        )
+        validators.collection_exists(collection_id=collection)
+        return collection
 
 
 class Status(str, enum.Enum):
