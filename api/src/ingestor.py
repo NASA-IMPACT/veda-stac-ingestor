@@ -60,7 +60,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
 
     # Insert into PgSTAC DB
     loader.load_items(
-        file=[i.item for i in ingestions],
+        file=[i.item.dict() for i in ingestions],
         # use insert_ignore to avoid overwritting existing items or upsert to replace
         insert_mode=Methods.insert_ignore,
     )
