@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import aws_cdk
+from aws_cdk import App
 
 from cdk import config, stack
 
 
 deployment = config.Deployment(_env_file=".env")
 
-app = aws_cdk.App()
+app = App()
 
 stack.StacIngestionApi(
     app,
