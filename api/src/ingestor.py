@@ -45,6 +45,7 @@ class DbCreds(pydantic.BaseModel):
 
 
 def get_db_credentials(secret_arn: str) -> DbCreds:
+    print("Fetching DB credentials...")
     session = boto3.session.Session(region_name=secret_arn.split(":")[3])
     client = session.client(service_name="secretsmanager")
     response = client.get_secret_value(SecretId=secret_arn)
@@ -59,6 +60,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     ingestions = list(get_queued_ingestions(event["Records"]))
 
     # Insert into PgSTAC DB
+    print(f"Ingesting {len(ingestions)} items")
     loader.load_items(
         file=[i.item.dict() for i in ingestions],
         # use insert_ignore to avoid overwritting existing items or upsert to replace
