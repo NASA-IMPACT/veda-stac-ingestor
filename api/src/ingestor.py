@@ -8,8 +8,7 @@ import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
 
-from api.src.dependencies import get_table
-
+from .dependencies import get_table
 from .schemas import Ingestion, Status
 
 if TYPE_CHECKING:
