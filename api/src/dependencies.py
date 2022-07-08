@@ -6,7 +6,7 @@ from authlib.jose import JsonWebToken, JsonWebKey, KeySet, JWTClaims, errors
 from cachetools import cached, TTLCache
 from fastapi import Depends, HTTPException, security
 
-from . import config, services, main
+from . import config, services
 
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,7 @@ token_scheme = security.HTTPBearer()
 
 
 def get_settings() -> config.Settings:
+    from . import main
     return main.settings
 
 
