@@ -33,6 +33,7 @@ class StacIngestionApi(Stack):
             "JWKS_URL": jwks_url,
             "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
+            "STAC_URL": config.stac_url,
         }
         handler = self.build_api_lambda(
             table=table,

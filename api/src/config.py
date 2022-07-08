@@ -13,6 +13,8 @@ class Settings(BaseSettings):
         description="URL of JWKS, e.g. https://cognito-idp.{region}.amazonaws.com/{userpool_id}/.well-known/jwks.json"  # noqa
     )
 
+    stac_url: AnyHttpUrl = Field(description="URL of STAC API")
+
     class Config(AwsSsmSourceConfig):
         env_file = ".env"
 

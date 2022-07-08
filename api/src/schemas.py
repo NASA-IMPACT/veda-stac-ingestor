@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional
 from urllib.parse import urlparse
 
+import requests
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator
 from stac_pydantic import Item, shared
@@ -39,8 +40,20 @@ class AccessibleItem(Item):
 
     @validator("collection")
     def exists(cls, collection):
-        # TODO: Validate that collection exists
-        print(f"{collection=}")
+        from .main import settings
+
+        url = "/".join(
+            f'{url.strip("/")}'
+            for url in [settings.stac_url, "collections", collection]
+        )
+
+        if (response := requests.get(url)).ok:
+            return collection
+
+        raise ValueError(
+            f"Invalid collection '{collection}', received "
+            f"{response.status_code} from STAC"
+        )
 
 
 class Status(str, enum.Enum):

@@ -1,7 +1,7 @@
 from getpass import getuser
 
 import aws_cdk
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, Field, HttpUrl
 
 
 class Deployment(BaseSettings):
@@ -48,6 +48,9 @@ class Deployment(BaseSettings):
     stac_db_public_subnet: bool = Field(
         description="Boolean indicating whether or not pgSTAC DB is in a public subnet",
         default=True,
+    )
+    stac_url: HttpUrl = Field(
+        description="URL of STAC API"
     )
 
     @property
