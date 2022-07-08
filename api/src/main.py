@@ -6,10 +6,14 @@ from fastapi import Depends, FastAPI, HTTPException
 from . import config, dependencies, schemas, services
 
 
-settings = config.Settings.from_ssm(
-    stack=os.environ.get(
-        "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
-    ),
+settings = (
+    config.Settings()
+    if os.environ.get("NO_PYDANTIC_SSM_SETTINGS")
+    else config.Settings.from_ssm(
+        stack=os.environ.get(
+            "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
+        ),
+    )
 )
 app = FastAPI(root_path=settings.root_path)
 
