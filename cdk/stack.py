@@ -105,7 +105,7 @@ class StacIngestionApi(Stack):
             index="src/handler.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             environment=env,
-            timeout=Duration.seconds(5),
+            timeout=Duration.seconds(15),
         )
         table.grant_read_write_data(handler)
         return handler
