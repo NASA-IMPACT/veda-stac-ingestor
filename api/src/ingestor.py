@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import json
 from typing import TYPE_CHECKING, Iterator, List
 
 import boto3
@@ -7,6 +8,7 @@ from boto3.dynamodb.types import TypeDeserializer
 import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
+from stac_pydantic import Item
 
 from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
@@ -62,7 +64,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     # Insert into PgSTAC DB
     print(f"Ingesting {len(ingestions)} items")
     loader.load_items(
-        file=[i.item.dict() for i in ingestions],
+        file=[json.loads(Item.parse_obj(i.item).json()) for i in ingestions],
         # use insert_ignore to avoid overwritting existing items or upsert to replace
         insert_mode=Methods.insert_ignore,
     )
