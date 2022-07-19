@@ -8,7 +8,7 @@ import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
 
-from .dependencies import get_table
+from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
 
 if TYPE_CHECKING:
@@ -68,7 +68,8 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     )
 
     # Update records in DynamoDB
-    with get_table().batch_writer() as batch:
+    table = get_table(get_settings())
+    with table.batch_writer() as batch:
         for ingestion in ingestions:
             batch.put_item(
                 Item=ingestion.copy(
