@@ -11,12 +11,15 @@ from . import config, services
 
 logger = logging.getLogger(__name__)
 
-token_scheme = security.HTTPBearer()
+
+token_scheme = security.OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://veda-auth-stack-alukach.auth.us-west-2.amazoncognito.com/oauth2/authorize",
+    tokenUrl="https://veda-auth-stack-alukach.auth.us-west-2.amazoncognito.com/oauth2/authorize",
+)
 
 
 def get_settings() -> config.Settings:
-    from . import main
-    return main.settings
+    return config.settings
 
 
 def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
