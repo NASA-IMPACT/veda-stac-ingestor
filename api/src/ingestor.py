@@ -79,7 +79,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
                         "status": Status.succeeded,
                         "updated_at": datetime.now(),
                     }
-                ).json()
+                ).dynamodb_dict()
             )
 
     return {"statusCode": 200, "body": "Done"}
