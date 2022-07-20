@@ -30,7 +30,7 @@ class StacIngestionApi(Stack):
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
 
-        data_access_role = iam.Role.from_role_name(
+        data_access_role = iam.Role.from_role_arn(
             self, "data-access-role", config.data_access_role
         )
         env = {
