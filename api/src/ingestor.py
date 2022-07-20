@@ -61,6 +61,10 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
 
     ingestions = list(get_queued_ingestions(event["Records"]))
 
+    if not ingestions:
+        print("No queued ingestions to process")
+        return
+
     # Insert into PgSTAC DB
     print(f"Ingesting {len(ingestions)} items")
     loader.load_items(
@@ -70,6 +74,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     )
 
     # Update records in DynamoDB
+    print("Updating ingested items status in DynamoDB...")
     table = get_table(get_settings())
     with table.batch_writer() as batch:
         for ingestion in ingestions:
@@ -81,5 +86,4 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
                     }
                 ).dynamodb_dict()
             )
-
-    return {"statusCode": 200, "body": "Done"}
+    print("Completed batch...")

@@ -30,7 +30,12 @@ async def list_ingestions(
     )
 
 
-@app.post("/ingestions", response_model=schemas.Ingestion, tags=["Ingestion"])
+@app.post(
+    "/ingestions",
+    response_model=schemas.Ingestion,
+    tags=["Ingestion"],
+    status_code=201,
+)
 async def create_ingestion(
     item: schemas.AccessibleItem,
     username: str = Depends(dependencies.get_username),
@@ -45,7 +50,9 @@ async def create_ingestion(
 
 
 @app.get(
-    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+    "/ingestions/{ingestion_id}",
+    response_model=schemas.Ingestion,
+    tags=["Ingestion"],
 )
 def get_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
@@ -54,7 +61,9 @@ def get_ingestion(
 
 
 @app.patch(
-    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+    "/ingestions/{ingestion_id}",
+    response_model=schemas.Ingestion,
+    tags=["Ingestion"],
 )
 def update_ingestion(
     update: schemas.UpdateIngestionRequest,
@@ -66,7 +75,9 @@ def update_ingestion(
 
 
 @app.delete(
-    "/ingestions/{ingestion_id}", response_model=schemas.Ingestion, tags=["Ingestion"]
+    "/ingestions/{ingestion_id}",
+    response_model=schemas.Ingestion,
+    tags=["Ingestion"],
 )
 def cancel_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
