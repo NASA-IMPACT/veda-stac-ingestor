@@ -76,7 +76,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     # Update records in DynamoDB
     print("Updating ingested items status in DynamoDB...")
     table = get_table(get_settings())
-    with table.batch_writer() as batch:
+    with table.batch_writer(overwrite_by_pkeys=["created_by", "id"]) as batch:
         for ingestion in ingestions:
             batch.put_item(
                 Item=ingestion.copy(
