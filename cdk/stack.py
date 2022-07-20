@@ -4,6 +4,7 @@ from aws_cdk import (
     RemovalPolicy,
     Stack,
     aws_apigateway as apigateway,
+    aws_iam as iam,
     aws_ec2 as ec2,
     aws_dynamodb as dynamodb,
     aws_lambda,
@@ -28,17 +29,22 @@ class StacIngestionApi(Stack):
         super().__init__(scope, construct_id, **kwargs)
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
+
+        data_access_role = iam.Role.from_role_name(
+            self, "data-access-role", config.data_access_role
+        )
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
             "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
+            "DATA_ACCESS_ROLE": data_access_role.role_arn,
         }
         handler = self.build_api_lambda(
-            table=table,
-            env=env,
+            table=table, env=env, data_access_role=data_access_role
         )
+
         self.build_api(
             handler=handler,
             stage=config.stage,
@@ -97,6 +103,7 @@ class StacIngestionApi(Stack):
         *,
         table: dynamodb.ITable,
         env: Dict[str, str],
+        data_access_role: iam.IRole,
     ) -> apigateway.LambdaRestApi:
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
@@ -108,6 +115,10 @@ class StacIngestionApi(Stack):
             timeout=Duration.seconds(15),
         )
         table.grant_read_write_data(handler)
+        data_access_role.grant(
+            handler.grant_principal,
+            "sts:AssumeRole",
+        )
         return handler
 
     def build_ingestor(

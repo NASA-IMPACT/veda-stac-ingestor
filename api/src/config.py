@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseSettings, Field, AnyHttpUrl
+from pydantic import BaseSettings, Field, AnyHttpUrl, constr
 from pydantic_ssm_settings import AwsSsmSourceConfig
 
 
@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     )
 
     stac_url: AnyHttpUrl = Field(description="URL of STAC API")
+
+    data_access_role: constr(regex=r"^arn:aws:iam::\d{12}:role/.+") = Field(
+        description="ARN of AWS Role used to validate access to S3 data"
+    )
 
     class Config(AwsSsmSourceConfig):
         env_file = ".env"

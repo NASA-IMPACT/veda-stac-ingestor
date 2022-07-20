@@ -50,7 +50,11 @@ class Deployment(BaseSettings):
         default=True,
     )
     stac_url: HttpUrl = Field(
-        description="URL of STAC API"
+        description="URL of STAC API",
+    )
+
+    data_access_role: str = Field(
+        description="Role used to test data access",
     )
 
     @property
