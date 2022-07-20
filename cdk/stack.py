@@ -105,6 +105,21 @@ class StacIngestionApi(Stack):
         env: Dict[str, str],
         data_access_role: iam.IRole,
     ) -> apigateway.LambdaRestApi:
+        handler_role = iam.Role(
+            self,
+            "execution-role",
+            description=(
+                "Role used by STAC Ingestor. Manually defined so that we can choose a "
+                "name that is supported by the data access roles trust policy"
+            ),
+            role_name="delta-backend-staging-stac-ingestion-api",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                )
+            ],
+        )
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
             "api-handler",
@@ -113,6 +128,7 @@ class StacIngestionApi(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             environment=env,
             timeout=Duration.seconds(15),
+            role=handler_role,
         )
         table.grant_read_write_data(handler)
         data_access_role.grant(
