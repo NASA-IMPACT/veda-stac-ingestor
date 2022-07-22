@@ -129,6 +129,7 @@ class StacIngestionApi(Stack):
             environment=env,
             timeout=Duration.seconds(30),
             role=handler_role,
+            memory_size=2048,
         )
         table.grant_read_write_data(handler)
         data_access_role.grant(
@@ -162,6 +163,7 @@ class StacIngestionApi(Stack):
                 else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
+            memory_size=2048,
         )
 
         # Allow handler to read DB secret
@@ -181,10 +183,10 @@ class StacIngestionApi(Stack):
         handler.add_event_source(
             events.DynamoEventSource(
                 table=table,
-                # Read when batches reach 100...
-                batch_size=100,
+                # Read when batches reach size...
+                batch_size=1000,
                 # ... or when window is reached.
-                max_batching_window=Duration.seconds(30),
+                max_batching_window=Duration.seconds(10),
                 # Read oldest data first.
                 starting_position=aws_lambda.StartingPosition.TRIM_HORIZON,
                 retry_attempts=1,
