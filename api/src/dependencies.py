@@ -16,6 +16,7 @@ token_scheme = security.HTTPBearer()
 
 def get_settings() -> config.Settings:
     from . import main
+
     return main.settings
 
 

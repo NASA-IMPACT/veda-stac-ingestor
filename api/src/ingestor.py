@@ -146,5 +146,5 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
         status=outcome,
         message=message,
     )
-    
+
     print("Completed batch...")
