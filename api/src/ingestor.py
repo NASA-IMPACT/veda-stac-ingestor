@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import decimal
-from typing import TYPE_CHECKING, Iterator, List
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
@@ -21,10 +21,18 @@ if TYPE_CHECKING:
 deserializer = TypeDeserializer()
 
 
-def default(obj):
-    if isinstance(obj, decimal.Decimal):
-        return float(obj)
-    raise TypeError
+def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
+    def decimal_to_float(obj):
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        raise TypeError
+
+    return orjson.loads(
+        orjson.dumps(
+            item,
+            default=decimal_to_float,
+        )
+    )
 
 
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
@@ -68,7 +76,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     ingestions = list(get_queued_ingestions(event["Records"]))
     items = [
         # NOTE: Important to deserialize values to convert decimals to floats
-        orjson.loads(orjson.dumps(i.item.dict(), default=default))
+        convert_decimals_to_float(i.item)
         for i in ingestions
     ]
 
