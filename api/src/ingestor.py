@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import decimal
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Sequence
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
@@ -18,24 +18,8 @@ if TYPE_CHECKING:
     from aws_lambda_typing.events.dynamodb_stream import DynamodbRecord
 
 
-deserializer = TypeDeserializer()
-
-
-def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
-    def decimal_to_float(obj):
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
-        raise TypeError
-
-    return orjson.loads(
-        orjson.dumps(
-            item,
-            default=decimal_to_float,
-        )
-    )
-
-
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
+    deserializer = TypeDeserializer()
     for record in records:
         # Parse Record
         parsed = {
@@ -61,6 +45,9 @@ class DbCreds(pydantic.BaseModel):
 
 
 def get_db_credentials(secret_arn: str) -> DbCreds:
+    """
+    Load pgSTAC database credentials from AWS Secrets Manager.
+    """
     print("Fetching DB credentials...")
     session = boto3.session.Session(region_name=secret_arn.split(":")[3])
     client = session.client(service_name="secretsmanager")
@@ -68,44 +55,96 @@ def get_db_credentials(secret_arn: str) -> DbCreds:
     return DbCreds.parse_raw(response["SecretString"])
 
 
+def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    DynamoDB stores floats as Decimals. We want to convert them back to floats
+    before inserting them into pgSTAC to avoid any issues when the records are
+    converted to JSON by pgSTAC.
+    """
+
+    def decimal_to_float(obj):
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        raise TypeError
+
+    return orjson.loads(
+        orjson.dumps(
+            item,
+            default=decimal_to_float,
+        )
+    )
+
+
+def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
+    """
+    Bulk insert STAC records into pgSTAC.
+    """
+    with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
+        loader = Loader(db=db)
+
+        items = [
+            # NOTE: Important to deserialize values to convert decimals to floats
+            convert_decimals_to_float(i.item)
+            for i in ingestions
+        ]
+
+        print(f"Ingesting {len(items)} items")
+        return loader.load_items(
+            file=items,
+            # use insert_ignore to avoid overwritting existing items or upsert to replace
+            insert_mode=Methods.insert_ignore,
+        )
+
+
+def update_dynamodb(
+    ingestions: Sequence[Ingestion],
+    status: Status,
+    message: Optional[str] = None,
+):
+    """
+    Bulk update DynamoDB with ingestion results.
+    """
+    # Update records in DynamoDB
+    print(f"Updating ingested items status in DynamoDB, marking as {status}...")
+    table = get_table(get_settings())
+    with table.batch_writer(overwrite_by_pkeys=["created_by", "id"]) as batch:
+        for ingestion in ingestions:
+            batch.put_item(
+                Item=ingestion.copy(
+                    update={
+                        "status": status,
+                        "message": message,
+                        "updated_at": datetime.now(),
+                    }
+                ).dynamodb_dict()
+            )
+
+
 def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
-    db_creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-    db = PgstacDB(dsn=db_creds.dsn_string, debug=True)
-    loader = Loader(db=db)
-
+    # Parse input
     ingestions = list(get_queued_ingestions(event["Records"]))
-    items = [
-        # NOTE: Important to deserialize values to convert decimals to floats
-        convert_decimals_to_float(i.item)
-        for i in ingestions
-    ]
-
     if not ingestions:
         print("No queued ingestions to process")
         return
 
     # Insert into PgSTAC DB
-    print(f"Ingesting {len(ingestions)} items")
-    batch_status = {
-        "status": Status.succeeded,
-        "updated_at": datetime.now(),
-    }
+    outcome = Status.succeeded
+    message = None
     try:
-        loader.load_items(
-            file=items,
-            # use insert_ignore to avoid overwritting existing items or upsert to replace
-            insert_mode=Methods.insert_ignore,
+        load_into_pgstac(
+            creds=get_db_credentials(os.environ["DB_SECRET_ARN"]),
+            ingestions=ingestions,
         )
     except Exception as e:
-        batch_status["status"] = Status.failed
-        batch_status["message"] = str(e)
-        print(e)
+        print(f"Encountered failure loading items into pgSTAC: {e}")
+        outcome = Status.failed
+        message = str(e)
 
-    # Update records in DynamoDB
-    print("Updating ingested items status in DynamoDB...")
-    table = get_table(get_settings())
-    with table.batch_writer(overwrite_by_pkeys=["created_by", "id"]) as batch:
-        for ingestion in ingestions:
-            item = ingestion.copy(update=batch_status).dynamodb_dict()
-            batch.put_item(Item=item)
+    # Update DynamoDB with outcome
+    update_dynamodb(
+        ingestions=ingestions,
+        status=outcome,
+        message=message,
+    )
+    
     print("Completed batch...")
