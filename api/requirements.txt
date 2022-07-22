@@ -10,4 +10,5 @@ pydantic>=1.9.0
 # pypgstac==0.6.6
 pypgstac @ git+https://github.com/stac-utils/pgstac.git@main#egg=pygstac&subdirectory=pypgstac
 requests>=2.27.1
+# Waiting for https://github.com/stac-utils/stac-pydantic/pull/116
 stac-pydantic @ git+https://github.com/alukach/stac-pydantic.git@patch-1
