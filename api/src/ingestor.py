@@ -1,14 +1,14 @@
 from datetime import datetime
 import os
-import json
+import decimal
 from typing import TYPE_CHECKING, Iterator, List
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
+import orjson
 import pydantic
 from pypgstac.load import Loader, Methods
 from pypgstac.db import PgstacDB
-from stac_pydantic import Item
 
 from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
@@ -19,6 +19,12 @@ if TYPE_CHECKING:
 
 
 deserializer = TypeDeserializer()
+
+
+def default(obj):
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    raise TypeError
 
 
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
@@ -60,6 +66,11 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     loader = Loader(db=db)
 
     ingestions = list(get_queued_ingestions(event["Records"]))
+    items = [
+        # NOTE: Important to deserialize values to convert decimals to floats
+        orjson.loads(orjson.dumps(i.item.dict(), default=default))
+        for i in ingestions
+    ]
 
     if not ingestions:
         print("No queued ingestions to process")
@@ -67,23 +78,26 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
 
     # Insert into PgSTAC DB
     print(f"Ingesting {len(ingestions)} items")
-    loader.load_items(
-        file=[json.loads(Item.parse_obj(i.item).json()) for i in ingestions],
-        # use insert_ignore to avoid overwritting existing items or upsert to replace
-        insert_mode=Methods.insert_ignore,
-    )
+    batch_status = {
+        "status": Status.succeeded,
+        "updated_at": datetime.now(),
+    }
+    try:
+        loader.load_items(
+            file=items,
+            # use insert_ignore to avoid overwritting existing items or upsert to replace
+            insert_mode=Methods.insert_ignore,
+        )
+    except Exception as e:
+        batch_status["status"] = Status.failed
+        batch_status["message"] = str(e)
+        print(e)
 
     # Update records in DynamoDB
     print("Updating ingested items status in DynamoDB...")
     table = get_table(get_settings())
     with table.batch_writer(overwrite_by_pkeys=["created_by", "id"]) as batch:
         for ingestion in ingestions:
-            batch.put_item(
-                Item=ingestion.copy(
-                    update={
-                        "status": Status.succeeded,
-                        "updated_at": datetime.now(),
-                    }
-                ).dynamodb_dict()
-            )
+            item = ingestion.copy(update=batch_status).dynamodb_dict()
+            batch.put_item(Item=item)
     print("Completed batch...")
