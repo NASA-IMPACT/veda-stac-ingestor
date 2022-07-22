@@ -16,10 +16,10 @@ def test_environ():
     os.environ["AWS_SESSION_TOKEN"] = "testing"
 
     # Config mocks
-    os.environ["S3_ROLE_ARN"] = "testing_arn"
-    os.environ["S3_UPLOAD_BUCKET"] = "test_bucket"
     os.environ["DYNAMODB_TABLE"] = "test_table"
     os.environ["JWKS_URL"] = "https://test-jwks.url"
+    os.environ["STAC_URL"] = "https://test-stac.url"
+    os.environ["DATA_ACCESS_ROLE"] = "arn:aws:iam::123456789012:role/test-role"
 
 
 @pytest.fixture
