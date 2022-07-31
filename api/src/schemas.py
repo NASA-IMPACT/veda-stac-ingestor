@@ -39,8 +39,8 @@ class AccessibleItem(Item):
 
     @validator("collection")
     def exists(cls, collection):
-        # TODO: Validate that collection exists
-        print(f"{collection=}")
+        validators.collection_exists(collection_id=collection)
+        return collection
 
 
 class Status(str, enum.Enum):

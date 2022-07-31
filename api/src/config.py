@@ -1,7 +1,10 @@
 from typing import Optional
 
-from pydantic import BaseSettings, Field, HttpUrl
+from pydantic import BaseSettings, Field, AnyHttpUrl, constr
 from pydantic_ssm_settings import AwsSsmSourceConfig
+
+
+AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 
 
 class Settings(BaseSettings):
@@ -9,8 +12,14 @@ class Settings(BaseSettings):
 
     root_path: Optional[str] = Field(description="Path from where to serve this URL.")
 
-    jwks_url: HttpUrl = Field(
+    jwks_url: AnyHttpUrl = Field(
         description="URL of JWKS, e.g. https://cognito-idp.{region}.amazonaws.com/{userpool_id}/.well-known/jwks.json"  # noqa
+    )
+
+    stac_url: AnyHttpUrl = Field(description="URL of STAC API")
+
+    data_access_role: AwsArn = Field(
+        description="ARN of AWS Role used to validate access to S3 data"
     )
 
     class Config(AwsSsmSourceConfig):

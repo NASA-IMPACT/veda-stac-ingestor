@@ -8,13 +8,16 @@ from fastapi import Depends, HTTPException, security
 
 from . import config, services
 
+
 logger = logging.getLogger(__name__)
 
 token_scheme = security.HTTPBearer()
 
 
 def get_settings() -> config.Settings:
-    return config.settings
+    from . import main
+
+    return main.settings
 
 
 def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
@@ -60,9 +63,9 @@ def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
 
-def get_table():
+def get_table(settings: config.Settings = Depends(get_settings)):
     client = boto3.resource("dynamodb")
-    return client.Table(config.settings.dynamodb_table)
+    return client.Table(settings.dynamodb_table)
 
 
 def get_db(table=Depends(get_table)) -> services.Database:

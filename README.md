@@ -1,6 +1,6 @@
-# VEDA STAC Ingestion System
+# VEDA STAC Ingestor
 
-This service acts as a staging area for STAC items that are to be ingested into the VEDA STAC catalog.
+This service provides an entry-point for users/services to add new records to our STAC database. Its primary functions are to 1) validate the STAC Items before insertion, 2) batch the insertions to reduce load on our STAC database.
 
 STAC items are validated to ensure that:
 
