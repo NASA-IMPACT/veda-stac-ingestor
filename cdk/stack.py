@@ -4,6 +4,7 @@ from aws_cdk import (
     RemovalPolicy,
     Stack,
     aws_apigateway as apigateway,
+    aws_iam as iam,
     aws_ec2 as ec2,
     aws_dynamodb as dynamodb,
     aws_lambda,
@@ -28,17 +29,22 @@ class StacIngestionApi(Stack):
         super().__init__(scope, construct_id, **kwargs)
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
+
+        data_access_role = iam.Role.from_role_arn(
+            self, "data-access-role", config.data_access_role
+        )
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
             "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
+            "DATA_ACCESS_ROLE": data_access_role.role_arn,
         }
         handler = self.build_api_lambda(
-            table=table,
-            env=env,
+            table=table, env=env, data_access_role=data_access_role
         )
+
         self.build_api(
             handler=handler,
             stage=config.stage,
@@ -97,7 +103,23 @@ class StacIngestionApi(Stack):
         *,
         table: dynamodb.ITable,
         env: Dict[str, str],
+        data_access_role: iam.IRole,
     ) -> apigateway.LambdaRestApi:
+        handler_role = iam.Role(
+            self,
+            "execution-role",
+            description=(
+                "Role used by STAC Ingestor. Manually defined so that we can choose a "
+                "name that is supported by the data access roles trust policy"
+            ),
+            role_name="delta-backend-staging-stac-ingestion-api",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                )
+            ],
+        )
         handler = aws_lambda_python_alpha.PythonFunction(
             self,
             "api-handler",
@@ -105,9 +127,15 @@ class StacIngestionApi(Stack):
             index="src/handler.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             environment=env,
-            timeout=Duration.seconds(5),
+            timeout=Duration.seconds(30),
+            role=handler_role,
+            memory_size=2048,
         )
         table.grant_read_write_data(handler)
+        data_access_role.grant(
+            handler.grant_principal,
+            "sts:AssumeRole",
+        )
         return handler
 
     def build_ingestor(
@@ -135,6 +163,7 @@ class StacIngestionApi(Stack):
                 else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
+            memory_size=2048,
         )
 
         # Allow handler to read DB secret
@@ -154,10 +183,10 @@ class StacIngestionApi(Stack):
         handler.add_event_source(
             events.DynamoEventSource(
                 table=table,
-                # Read when batches reach 100...
-                batch_size=100,
+                # Read when batches reach size...
+                batch_size=1000,
                 # ... or when window is reached.
-                max_batching_window=Duration.seconds(30),
+                max_batching_window=Duration.seconds(10),
                 # Read oldest data first.
                 starting_position=aws_lambda.StartingPosition.TRIM_HORIZON,
                 retry_attempts=1,

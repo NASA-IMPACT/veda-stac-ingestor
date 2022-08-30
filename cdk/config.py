@@ -1,7 +1,10 @@
 from getpass import getuser
 
 import aws_cdk
-from pydantic import BaseSettings, Field, HttpUrl
+from pydantic import BaseSettings, Field, HttpUrl, constr
+
+
+AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 
 
 class Deployment(BaseSettings):
@@ -50,7 +53,11 @@ class Deployment(BaseSettings):
         default=True,
     )
     stac_url: HttpUrl = Field(
-        description="URL of STAC API"
+        description="URL of STAC API",
+    )
+
+    data_access_role: AwsArn = Field(
+        description="ARN of AWS Role used to validate access to S3 data"
     )
 
     @property

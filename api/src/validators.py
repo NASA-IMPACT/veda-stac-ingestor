@@ -3,11 +3,28 @@ import functools
 import requests
 
 
+@functools.cache
+def get_s3_credentials():
+    from .main import settings
+
+    print("Fetching S3 Credentials...")
+
+    response = boto3.client("sts").assume_role(
+        RoleArn=settings.data_access_role,
+        RoleSessionName="stac-ingestor-data-validation",
+    )
+    return {
+        "aws_access_key_id": response["Credentials"]["AccessKeyId"],
+        "aws_secret_access_key": response["Credentials"]["SecretAccessKey"],
+        "aws_session_token": response["Credentials"]["SessionToken"],
+    }
+
+
 def s3_object_is_accessible(bucket: str, key: str):
     """
     Ensure we can send HEAD requests to S3 objects.
     """
-    client = boto3.client("s3")
+    client = boto3.client("s3", **get_s3_credentials())
     try:
         client.head_object(Bucket=bucket, Key=key)
     except client.exceptions.ClientError as e:
@@ -42,7 +59,7 @@ def collection_exists(collection_id: str) -> bool:
     if (response := requests.get(url)).ok:
         return True
 
-    raise ValueError(
+    raise ValueError([]
         f"Invalid collection '{collection_id}', received "
         f"{response.status_code} response code from STAC API"
     )

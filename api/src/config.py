@@ -8,6 +8,9 @@ from pydantic import BaseSettings, Field, AnyHttpUrl, constr
 from pydantic_ssm_settings import AwsSsmSourceConfig
 
 
+AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
+
+
 class Settings(BaseSettings):
     dynamodb_table: str
 
@@ -25,6 +28,10 @@ class Settings(BaseSettings):
 
     stac_url: AnyHttpUrl = Field(
         description="URL of STAC API",
+    )
+
+    data_access_role: AwsArn = Field(
+        description="ARN of AWS Role used to validate access to S3 data"
     )
 
     class Config(AwsSsmSourceConfig):

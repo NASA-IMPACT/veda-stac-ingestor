@@ -19,7 +19,9 @@ token_scheme = security.OAuth2AuthorizationCodeBearer(
 
 
 def get_settings() -> config.Settings:
-    return config.settings
+    from . import main
+
+    return main.settings
 
 
 def get_jwks_url(settings: config.Settings = Depends(get_settings)) -> str:
