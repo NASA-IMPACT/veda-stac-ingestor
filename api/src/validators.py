@@ -59,7 +59,7 @@ def collection_exists(collection_id: str) -> bool:
     if (response := requests.get(url)).ok:
         return True
 
-    raise ValueError([]
+    raise ValueError(
         f"Invalid collection '{collection_id}', received "
         f"{response.status_code} response code from STAC API"
     )
