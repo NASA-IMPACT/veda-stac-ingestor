@@ -7,7 +7,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional
 from urllib.parse import urlparse
 
-import requests
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator
 from stac_pydantic import Item, shared
