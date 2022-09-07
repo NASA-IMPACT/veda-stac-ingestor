@@ -19,6 +19,11 @@ if TYPE_CHECKING:
     from aws_lambda_typing.events.dynamodb_stream import DynamodbRecord
 
 
+# Hack to avoid issues deserializing large values
+# https://github.com/boto/boto3/issues/2500#issuecomment-654925049
+boto3.dynamodb.types.DYNAMODB_CONTEXT = decimal.Context(prec=100)
+
+
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
     deserializer = TypeDeserializer()
     for record in records:
