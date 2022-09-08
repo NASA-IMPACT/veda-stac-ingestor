@@ -104,7 +104,7 @@ class StacIngestionApi(Stack):
         table: dynamodb.ITable,
         env: Dict[str, str],
         data_access_role: iam.IRole,
-        stage: str
+        stage: str,
     ) -> apigateway.LambdaRestApi:
         handler_role = iam.Role(
             self,
