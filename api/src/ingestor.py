@@ -92,7 +92,7 @@ def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
         return loader.load_items(
             file=items,
             # use insert_ignore to avoid overwritting existing items or upsert to replace
-            insert_mode=Methods.insert_ignore,
+            insert_mode=Methods.upsert,
         )
 
 
