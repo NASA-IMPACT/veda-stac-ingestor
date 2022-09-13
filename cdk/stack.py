@@ -42,7 +42,7 @@ class StacIngestionApi(Stack):
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
         }
         handler = self.build_api_lambda(
-            table=table, env=env, data_access_role=data_access_role
+            table=table, env=env, data_access_role=data_access_role, stage=config.stage
         )
 
         self.build_api(
@@ -104,6 +104,7 @@ class StacIngestionApi(Stack):
         table: dynamodb.ITable,
         env: Dict[str, str],
         data_access_role: iam.IRole,
+        stage: str,
     ) -> apigateway.LambdaRestApi:
         handler_role = iam.Role(
             self,
@@ -112,7 +113,7 @@ class StacIngestionApi(Stack):
                 "Role used by STAC Ingestor. Manually defined so that we can choose a "
                 "name that is supported by the data access roles trust policy"
             ),
-            role_name="delta-backend-staging-stac-ingestion-api",
+            role_name=f"delta-backend-staging-stac-ingestion-api-{stage}",
             assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
