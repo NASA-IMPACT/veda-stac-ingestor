@@ -7,8 +7,10 @@ import boto3
 from boto3.dynamodb.types import TypeDeserializer
 import orjson
 import pydantic
-from pypgstac.load import Loader, Methods
+from pypgstac.load import Methods
 from pypgstac.db import PgstacDB
+
+from .vedaloader import VEDALoader
 
 from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
@@ -80,7 +82,7 @@ def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
     Bulk insert STAC records into pgSTAC.
     """
     with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-        loader = Loader(db=db)
+        loader = VEDALoader(db=db)
 
         items = [
             # NOTE: Important to deserialize values to convert decimals to floats
@@ -89,11 +91,18 @@ def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
         ]
 
         print(f"Ingesting {len(items)} items")
-        return loader.load_items(
+        loading_result = loader.load_items(
             file=items,
             # use insert_ignore to avoid overwritting existing items or upsert to replace
             insert_mode=Methods.upsert,
         )
+
+        # Trigger update on summaries and extents
+        collections = set([item.collection for item in items])
+        for collection in collections:
+            loader.update_collection_summaries(collection)
+
+        return loading_result
 
 
 def update_dynamodb(
