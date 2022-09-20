@@ -10,10 +10,9 @@ import pydantic
 from pypgstac.load import Methods
 from pypgstac.db import PgstacDB
 
-from .vedaloader import VEDALoader
-
 from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
+from .vedaloader import VEDALoader
 
 if TYPE_CHECKING:
     from aws_lambda_typing import context as context_, events
