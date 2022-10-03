@@ -27,11 +27,22 @@ class VEDALoader(Loader):
                     "SELECT dashboard.update_collection_default_summaries(%s)",
                     collection_id,
                 )
-                logger.info("Updating bbox for collection: {}.".format(collection_id))
-                cur.execute("SELECT pgstac.collection_bbox(%s)", collection_id)
-                logger.info(
-                    "Updating temporal extent for collection: {}.".format(collection_id)
-                )
+                logger.info("Updating spatial and temporal extents for collection: {}.".format(collection_id))
                 cur.execute(
-                    "SELECT pgstac.collection_temporal_extent(%s)", collection_id
+                    """
+                    UPDATE collections SET
+                    content = content ||
+                    jsonb_build_object(
+                        'extent', jsonb_build_object(
+                            'spatial', jsonb_build_object(
+                                'bbox', collection_bbox(collections.id)
+                            ),
+                            'temporal', jsonb_build_object(
+                                'interval', collection_temporal_extent(collections.id)
+                            )
+                        )
+                    )
+                    WHERE collections.id=%s;
+                    """,
+                    collection_id
                 )
