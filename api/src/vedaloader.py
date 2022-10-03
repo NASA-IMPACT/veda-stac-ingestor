@@ -27,7 +27,9 @@ class VEDALoader(Loader):
                     "SELECT dashboard.update_collection_default_summaries(%s)",
                     collection_id,
                 )
-                logger.info("Updating spatial and temporal extents for collection: {}.".format(collection_id))
+                logger.info("Updating extents for collection: {}.".format(
+                    collection_id
+                ))
                 cur.execute(
                     """
                     UPDATE collections SET
@@ -44,5 +46,5 @@ class VEDALoader(Loader):
                     )
                     WHERE collections.id=%s;
                     """,
-                    collection_id
+                    collection_id,
                 )
