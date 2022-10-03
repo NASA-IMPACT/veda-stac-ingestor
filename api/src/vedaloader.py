@@ -28,9 +28,7 @@ class VEDALoader(Loader):
                     collection_id,
                 )
                 logger.info(
-                    "Updating extents for collection: {}.".format(
-                        collection_id
-                    )
+                    "Updating extents for collection: {}.".format(collection_id)
                 )
                 cur.execute(
                     """
