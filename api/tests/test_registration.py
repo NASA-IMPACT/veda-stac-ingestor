@@ -1,9 +1,12 @@
 import base64
+from decimal import Decimal
 import json
 from datetime import timedelta
 from typing import TYPE_CHECKING, List
 
 import pytest
+
+from src.schemas import Ingestion
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -80,3 +83,16 @@ class TestList:
             json.loads(ingestion.json(by_alias=True))
             for ingestion in example_ingestions[limit : limit * 2]
         ]
+
+    def test_load_large_number(self):
+        ingestion_data = self.example_ingestion.dict()
+        visual_asset = ingestion_data["item"]["assets"]["visual"]
+        # todo: why does this need to be a float?
+        visual_asset["nodata"] = -340282306073709650000000000000000000000.0
+        ingestion = Ingestion.parse_obj(ingestion_data)
+        self.mock_table.put_item(Item=ingestion.dynamodb_dict())
+
+        response = self.api_client.get(ingestion_endpoint)
+        actual = response.json()["items"]
+        expected = [json.loads(ingestion.json(by_alias=True))]
+        assert actual == expected
