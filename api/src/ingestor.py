@@ -165,7 +165,6 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
         print(f"Encountered failure loading items into pgSTAC: {e}")
         outcome = Status.failed
         message = str(e)
-        print(ingestions)
 
     # Update DynamoDB with outcome
     update_dynamodb(
