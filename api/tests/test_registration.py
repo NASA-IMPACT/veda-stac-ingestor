@@ -88,7 +88,7 @@ class TestList:
         ingestion_data = self.example_ingestion.dict()
         visual_asset = ingestion_data["item"]["assets"]["visual"]
         # todo: why does this need to be a float?
-        visual_asset["nodata"] = -340282306073709650000000000000000000000.0
+        visual_asset["nodata"] = -3.4028234663852886e+38
         ingestion = Ingestion.parse_obj(ingestion_data)
         self.mock_table.put_item(Item=ingestion.dynamodb_dict())
 
@@ -96,3 +96,5 @@ class TestList:
         actual = response.json()["items"]
         expected = [json.loads(ingestion.json(by_alias=True))]
         assert actual == expected
+
+    
