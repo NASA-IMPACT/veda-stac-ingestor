@@ -1,10 +1,12 @@
 from datetime import datetime
 import os
 import decimal
+import traceback
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Sequence
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
+import ddbcereal
 import orjson
 import pydantic
 from pypgstac.load import Methods
@@ -28,10 +30,19 @@ def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion
     deserializer = TypeDeserializer()
     for record in records:
         # Parse Record
-        parsed = {
-            k: deserializer.deserialize(v)
-            for k, v in record["dynamodb"]["NewImage"].items()
-        }
+        try:
+            parsed = {
+                k: deserializer.deserialize(v)
+                for k, v in record["dynamodb"]["NewImage"].items()
+            }
+        except decimal.Rounded:
+            print("Decimal rounding error - using alternate deserializer")
+            # The above hack doesn't cover all cases - ddbcereal can, but is slower and has less eyes on its codebase than boto.
+            alt_deserializer = ddbcereal.deserializer()
+            parsed = {
+                k: alt_deserializer.deserialize(v)
+                for k, v in record["dynamodb"]["NewImage"].items()
+            }
         ingestion = Ingestion.construct(**parsed)
         if ingestion.status == Status.queued:
             yield ingestion
@@ -102,7 +113,7 @@ def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
         )
 
         # Trigger update on summaries and extents
-        collections = set([item.collection for item in items])
+        collections = set([item['collection'] for item in items])
         for collection in collections:
             loader.update_collection_summaries(collection)
 
@@ -149,9 +160,11 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
             ingestions=ingestions,
         )
     except Exception as e:
+        traceback.print_exc()
         print(f"Encountered failure loading items into pgSTAC: {e}")
         outcome = Status.failed
         message = str(e)
+        print(ingestions)
 
     # Update DynamoDB with outcome
     update_dynamodb(

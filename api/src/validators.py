@@ -3,7 +3,7 @@ import functools
 import requests
 
 
-@functools.cache
+@functools.lru_cache()
 def get_s3_credentials():
     from .main import settings
 
@@ -45,7 +45,7 @@ def url_is_accessible(href: str):
         )
 
 
-@functools.cache
+@functools.lru_cache()
 def collection_exists(collection_id: str) -> bool:
     """
     Ensure collection exists in STAC
