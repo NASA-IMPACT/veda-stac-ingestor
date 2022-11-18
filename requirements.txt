@@ -4,6 +4,7 @@ black
 boto3-stubs[essential]
 constructs>=10.0.0,<11.0.0
 flake8
+httpx
 isort
 moto[s3,dynamodb]
 pytest
