@@ -1,5 +1,4 @@
 import base64
-from decimal import Decimal
 import json
 from datetime import timedelta
 from typing import TYPE_CHECKING, List
@@ -66,18 +65,19 @@ class TestList:
             for ingestion in example_ingestions[:limit]
         ]
 
-    # test is broken - issue created at https://github.com/NASA-IMPACT/veda-stac-ingestor/issues/27
-    '''
+    # test is broken
+    # issue created at https://github.com/NASA-IMPACT/veda-stac-ingestor/issues/27
+    """
     def test_get_next_page(self):
         example_ingestions = self.populate_table(100)
-    
+
         limit = 25
         next_param = base64.b64encode(
             example_ingestions[limit - 1]
             .json(include={"created_by", "id", "status", "created_at"})
             .encode()
         )
-    
+
         response = self.api_client.get(
             ingestion_endpoint, params={"limit": limit, "next": next_param}
         )
@@ -86,13 +86,13 @@ class TestList:
             json.loads(ingestion.json(by_alias=True))
             for ingestion in example_ingestions[limit : limit * 2]
         ]
-    '''
+    """
 
     def test_load_large_number(self):
         ingestion_data = self.example_ingestion.dict()
         visual_asset = ingestion_data["item"]["assets"]["visual"]
         # todo: why does this need to be a float?
-        visual_asset["nodata"] = -3.4028234663852886e+38
+        visual_asset["nodata"] = -3.4028234663852886e38
         ingestion = Ingestion.parse_obj(ingestion_data)
         self.mock_table.put_item(Item=ingestion.dynamodb_dict())
 
@@ -100,14 +100,15 @@ class TestList:
         actual = response.json()["items"]
         expected = [json.loads(ingestion.json(by_alias=True))]
 
-        # first, check the nodata value (value should match, format will not - isclose() will properly compare the values)
+        # first, check the nodata value
+        # value should match, format will not. isclose() will properly compare the values
         assert isclose(
             actual[0]["item"]["assets"]["visual"]["nodata"],
             expected[0]["item"]["assets"]["visual"]["nodata"],
-            abs_tol=1
+            abs_tol=1,
         )
-        expected[0]["item"]["assets"]["visual"]["nodata"] = actual[0]["item"]["assets"]["visual"]["nodata"]
+        expected[0]["item"]["assets"]["visual"]["nodata"] = actual[0]["item"]["assets"][
+            "visual"
+        ]["nodata"]
         # second, check everything else
         assert actual == expected
-
-    

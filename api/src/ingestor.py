@@ -37,7 +37,8 @@ def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion
             }
         except decimal.Rounded:
             print("Decimal rounding error - using alternate deserializer")
-            # The above hack doesn't cover all cases - ddbcereal can, but is slower and has less eyes on its codebase than boto.
+            # The above hack doesn't cover all cases
+            # ddbcereal can, but is slower and has less eyes on its codebase than boto.
             alt_deserializer = ddbcereal.deserializer()
             parsed = {
                 k: alt_deserializer.deserialize(v)
@@ -113,7 +114,7 @@ def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
         )
 
         # Trigger update on summaries and extents
-        collections = set([item['collection'] for item in items])
+        collections = set([item["collection"] for item in items])
         for collection in collections:
             loader.update_collection_summaries(collection)
 
