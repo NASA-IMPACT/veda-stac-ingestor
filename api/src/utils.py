@@ -70,6 +70,7 @@ def load_into_pgstac(
 ):
     """
     Bulk insert STAC records into pgSTAC.
+    The ingestion can be items or collection, determined by the `table` arg.
     """
     loader = VEDALoader(db=db)
     loading_function = load_items
@@ -81,6 +82,10 @@ def load_into_pgstac(
 
 
 def load_items(items: Sequence[AccessibleItem], loader):
+    """
+    Loads items into the PgSTAC database and 
+    updates the summaries and extent for the collections involved
+    """
     loading_result = loader.load_items(
         file=items,
         # use insert_ignore to avoid overwritting existing items or upsert to replace
@@ -96,6 +101,9 @@ def load_items(items: Sequence[AccessibleItem], loader):
 
 
 def load_collection(collection: Sequence[DashboardCollection], loader):
+    """
+    Loads the collection to the PgSTAC database
+    """
     return loader.load_collections(
         file=collection,
         # use insert_ignore to avoid overwritting existing items or upsert to replace
