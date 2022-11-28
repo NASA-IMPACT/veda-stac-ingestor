@@ -104,6 +104,9 @@ def publish_collection(collection: schemas.DashboardCollection):
     # pgstac create collection
     try:
         collection_loader.ingest(collection)
+        return {
+            f"Successfully published: {collection.id}"
+        }
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -118,9 +121,10 @@ def publish_collection(collection: schemas.DashboardCollection):
 )
 def delete_collection(collection_id: str):
     try:
-        # pgstac delete
-        print("Deleting..")
         collection_loader.delete(collection_id=collection_id)
+        return {
+            f"Successfully deleted: {collection_id}"
+        }
     except Exception as e:
         print(e)
         raise HTTPException(status_code=400, detail=(f"{e}"))
