@@ -3,7 +3,7 @@ from getpass import getuser
 
 from fastapi import Depends, FastAPI, HTTPException
 
-from . import config, dependencies, schemas, services
+from . import config, dependencies, schemas, services, collection as collection_loader
 
 
 settings = (
@@ -93,6 +93,47 @@ def cancel_ingestion(
         )
     return ingestion.cancel(db)
 
+
+@app.post(
+    "/collections",
+    tags=["Collection"],
+    status_code=201,
+    dependencies=[Depends(dependencies.get_username)]
+)
+def publish_collection(
+    collection: schemas.DashboardCollection
+):
+    # pgstac create collection
+    try:
+        collection_loader.ingest(collection)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unable to publish collection: {e}"
+            ),
+        )
+
+@app.delete(
+    "/collections/{collection_id}",
+    tags=["Collection"],
+    dependencies=[Depends(dependencies.get_username)]
+)
+def delete_collection(
+    collection_id: str
+):
+    try:
+        # pgstac delete
+        print("Deleting..")
+        collection_loader.delete(collection_id=collection_id)
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{e}"
+            )
+        )
 
 @app.get("/auth/me")
 def who_am_i(claims=Depends(dependencies.decode_token)):
