@@ -42,15 +42,18 @@ class StacIngestionApi(Stack):
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
         }
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
-        db_vpc=ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
-        db_security_group=ec2.SecurityGroup.from_security_group_id(
+        db_vpc = ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
+        db_security_group = ec2.SecurityGroup.from_security_group_id(
             self,
             "db-security-group",
             security_group_id=config.stac_db_security_group_id,
         )
 
         handler = self.build_api_lambda(
-            table=table, env=env, data_access_role=data_access_role, stage=config.stage,
+            table=table,
+            env=env,
+            data_access_role=data_access_role,
+            stage=config.stage,
             db_secret=db_secret,
             db_vpc=db_vpc,
             db_security_group=db_security_group,

@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Literal
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator, Field
+from pydantic import (
+    BaseModel,
+    PositiveInt,
+    dataclasses,
+    error_wrappers,
+    validator,
+    Field,
+)
 from stac_pydantic import Item, Collection, shared
 
 from . import validators
@@ -45,7 +52,9 @@ class AccessibleItem(Item):
 
 class DashboardCollection(Collection):
     is_periodic: bool = Field(alias="dashboard:is_periodic")
-    time_density: Literal["day", "month", "year", "null"] = Field(alias="dashboard:time_density", default="null")
+    time_density: Literal["day", "month", "year", "null"] = Field(
+        alias="dashboard:time_density", default="null"
+    )
     item_assets: Dict
 
     @validator("item_assets")

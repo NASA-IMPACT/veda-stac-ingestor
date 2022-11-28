@@ -66,7 +66,7 @@ def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
 def load_into_pgstac(
     db: "PgstacDB",
     ingestions: Union[Sequence[AccessibleItem], Sequence[DashboardCollection]],
-    table: IngestionType
+    table: IngestionType,
 ):
     """
     Bulk insert STAC records into pgSTAC.
@@ -76,14 +76,12 @@ def load_into_pgstac(
     loading_function = load_items
     if table == IngestionType.collections:
         loading_function = load_collection
-    return loading_function(
-        ingestions, loader
-    )
+    return loading_function(ingestions, loader)
 
 
 def load_items(items: Sequence[AccessibleItem], loader):
     """
-    Loads items into the PgSTAC database and 
+    Loads items into the PgSTAC database and
     updates the summaries and extent for the collections involved
     """
     loading_result = loader.load_items(

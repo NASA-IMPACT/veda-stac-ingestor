@@ -12,7 +12,12 @@ from pypgstac.db import PgstacDB
 
 from .dependencies import get_settings, get_table
 from .schemas import Ingestion, Status
-from .utils import IngestionType, get_db_credentials, convert_decimals_to_float, load_into_pgstac
+from .utils import (
+    IngestionType,
+    get_db_credentials,
+    convert_decimals_to_float,
+    load_into_pgstac,
+)
 
 if TYPE_CHECKING:
     from aws_lambda_typing import context as context_, events
@@ -93,7 +98,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     outcome = Status.succeeded
     message = None
     try:
-         with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
+        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
             load_into_pgstac(
                 db=db,
                 ingestions=ingestions,

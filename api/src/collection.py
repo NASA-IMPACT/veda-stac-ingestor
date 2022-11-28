@@ -3,9 +3,13 @@ import os
 from pypgstac.db import PgstacDB
 
 from .schemas import DashboardCollection
-from .utils import get_db_credentials, convert_decimals_to_float, load_into_pgstac, IngestionType
+from .utils import (
+    get_db_credentials,
+    convert_decimals_to_float,
+    load_into_pgstac,
+    IngestionType,
+)
 from .vedaloader import VEDALoader
-
 
 
 def ingest(collection: DashboardCollection):
@@ -13,15 +17,12 @@ def ingest(collection: DashboardCollection):
     Takes a collection model, does necessary preprocessing and loads into the PgSTAC collection table
     """
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-    collection = [convert_decimals_to_float(
-        collection.dict(by_alias=True, exclude_unset=True)
-    )]
+    collection = [
+        convert_decimals_to_float(collection.dict(by_alias=True, exclude_unset=True))
+    ]
     with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-        load_into_pgstac(
-            db=db,
-            ingestions=collection,
-            table=IngestionType.collections
-        )
+        load_into_pgstac(db=db, ingestions=collection, table=IngestionType.collections)
+
 
 def delete(collection_id: str):
     """
