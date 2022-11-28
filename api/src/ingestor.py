@@ -88,8 +88,8 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
 
     ingestions = [
         # NOTE: Important to deserialize values to convert decimals to floats
-        convert_decimals_to_float(i.item)
-        for i in ingestions
+        convert_decimals_to_float(record.item)
+        for record in records
     ]
 
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])

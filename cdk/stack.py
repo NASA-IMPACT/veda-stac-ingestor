@@ -143,7 +143,7 @@ class StacIngestionApi(Stack):
             index="src/handler.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             timeout=Duration.seconds(30),
-            # role=handler_role,
+            role=handler_role,
             environment={"DB_SECRET_ARN": db_secret.secret_arn, **env},
             vpc=db_vpc,
             vpc_subnets=ec2.SubnetSelection(

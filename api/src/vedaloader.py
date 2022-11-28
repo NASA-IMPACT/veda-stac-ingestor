@@ -24,7 +24,8 @@ class VEDALoader(Loader):
                     f"Updating dashboard summaries for collection: {collection_id}."
                 )
                 cur.execute(
-                    f"SELECT dashboard.update_collection_default_summaries('{collection_id}')",
+                    f"SELECT dashboard.\
+                        update_collection_default_summaries('{collection_id}')",
                 )
                 logger.info(f"Updating extents for collection: {collection_id}.")
                 cur.execute(

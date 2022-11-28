@@ -14,7 +14,9 @@ from .vedaloader import VEDALoader
 
 def ingest(collection: DashboardCollection):
     """
-    Takes a collection model, does necessary preprocessing and loads into the PgSTAC collection table
+    Takes a collection model, 
+    does necessary preprocessing,
+    and loads into the PgSTAC collection table
     """
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
     collection = [
