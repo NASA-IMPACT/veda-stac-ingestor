@@ -14,7 +14,7 @@ from .vedaloader import VEDALoader
 
 def ingest(collection: DashboardCollection):
     """
-    Takes a collection model, 
+    Takes a collection model,
     does necessary preprocessing,
     and loads into the PgSTAC collection table
     """
