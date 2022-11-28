@@ -4,7 +4,7 @@ import requests
 
 from typing import Dict
 
-@functools.cache
+@functools.lru_cache()
 def get_s3_credentials():
     from .main import settings
 
@@ -57,7 +57,7 @@ def cog_default_exists(item_assets: Dict):
         )
 
 
-@functools.cache
+@functools.lru_cache()
 def collection_exists(collection_id: str) -> bool:
     """
     Ensure collection exists in STAC

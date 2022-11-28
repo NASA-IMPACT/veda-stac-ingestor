@@ -44,7 +44,7 @@ class VEDALoader(Loader):
                     )
                     WHERE collections.id=%s;
                     """,
-                    collection_id,
+                    (collection_id,),
                 )
     
     def delete_collection(self, collection_id: str) -> None:

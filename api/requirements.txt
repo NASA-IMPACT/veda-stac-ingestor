@@ -10,3 +10,4 @@ pypgstac==0.6.6
 requests>=2.27.1
 # Waiting for https://github.com/stac-utils/stac-pydantic/pull/116
 stac-pydantic @ git+https://github.com/alukach/stac-pydantic.git@patch-1
+ddbcereal==2.1.1
