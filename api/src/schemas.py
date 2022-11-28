@@ -4,12 +4,12 @@ import enum
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Literal
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator
-from stac_pydantic import Item, shared
+from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator, Field
+from stac_pydantic import Item, Collection, shared
 
 from . import validators
 
@@ -41,6 +41,17 @@ class AccessibleItem(Item):
     def exists(cls, collection):
         validators.collection_exists(collection_id=collection)
         return collection
+
+
+class DashboardCollection(Collection):
+    is_periodic: bool = Field(alias="dashboard:is_periodic")
+    time_density: Literal["day", "month", "year", "null"] = Field(alias="dashboard:time_density", default="null")
+    item_assets: Dict
+
+    @validator("item_assets")
+    def cog_default_exists(cls, item_assets):
+        validators.cog_default_exists(item_assets=item_assets)
+        return item_assets
 
 
 class Status(str, enum.Enum):
