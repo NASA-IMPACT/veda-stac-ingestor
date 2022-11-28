@@ -41,8 +41,20 @@ class StacIngestionApi(Stack):
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
         }
+        db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
+        db_vpc=ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
+        db_security_group=ec2.SecurityGroup.from_security_group_id(
+            self,
+            "db-security-group",
+            security_group_id=config.stac_db_security_group_id,
+        )
+
         handler = self.build_api_lambda(
-            table=table, env=env, data_access_role=data_access_role, stage=config.stage
+            table=table, env=env, data_access_role=data_access_role, stage=config.stage,
+            db_secret=db_secret,
+            db_vpc=db_vpc,
+            db_security_group=db_security_group,
+            db_subnet_public=config.stac_db_public_subnet,
         )
 
         self.build_api(
@@ -53,13 +65,9 @@ class StacIngestionApi(Stack):
         self.build_ingestor(
             table=table,
             env=env,
-            db_secret=self.get_db_secret(config.stac_db_secret_name),
-            db_vpc=ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id),
-            db_security_group=ec2.SecurityGroup.from_security_group_id(
-                self,
-                "db-security-group",
-                security_group_id=config.stac_db_security_group_id,
-            ),
+            db_secret=db_secret,
+            db_vpc=db_vpc,
+            db_security_group=db_security_group,
             db_subnet_public=config.stac_db_public_subnet,
         )
 
@@ -105,6 +113,10 @@ class StacIngestionApi(Stack):
         env: Dict[str, str],
         data_access_role: iam.IRole,
         stage: str,
+        db_secret: secretsmanager.ISecret,
+        db_vpc: ec2.IVpc,
+        db_security_group: ec2.ISecurityGroup,
+        db_subnet_public: bool,
     ) -> apigateway.LambdaRestApi:
         handler_role = iam.Role(
             self,
@@ -127,15 +139,31 @@ class StacIngestionApi(Stack):
             entry="api",
             index="src/handler.py",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
-            environment=env,
             timeout=Duration.seconds(30),
-            role=handler_role,
+            # role=handler_role,
+            environment={"DB_SECRET_ARN": db_secret.secret_arn, **env},
+            vpc=db_vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PUBLIC
+                if db_subnet_public
+                else ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            allow_public_subnet=True,
             memory_size=2048,
         )
         table.grant_read_write_data(handler)
         data_access_role.grant(
             handler.grant_principal,
             "sts:AssumeRole",
+        )
+        # Allow handler to read DB secret
+        db_secret.grant_read(handler)
+
+        # Allow handler to connect to DB
+        db_security_group.add_ingress_rule(
+            peer=handler.connections.security_groups[0],
+            connection=ec2.Port.tcp(5432),
+            description="Allow connections from STAC Ingestor",
         )
         return handler
 
@@ -210,9 +238,9 @@ class StacIngestionApi(Stack):
             deploy_options=apigateway.StageOptions(stage_name=stage),
         )
 
-    def get_db_secret(self, secret_name: str) -> secretsmanager.ISecret:
+    def get_db_secret(self, secret_name: str, stage: str) -> secretsmanager.ISecret:
         return secretsmanager.Secret.from_secret_name_v2(
-            self, "pgstac-db-secret", secret_name
+            self, f"pgstac-db-secret-{stage}", secret_name
         )
 
     def register_ssm_parameter(
