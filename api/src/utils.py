@@ -65,7 +65,7 @@ def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
 
 def load_into_pgstac(
     db: "PgstacDB",
-    ingestions: Union[Sequence[AccessibleItem], DashboardCollection],
+    ingestions: Union[Sequence[AccessibleItem], Sequence[DashboardCollection]],
     table: IngestionType
 ):
     """
@@ -95,9 +95,9 @@ def load_items(items: Sequence[AccessibleItem], loader):
     return loading_result
 
 
-def load_collection(collection: DashboardCollection, loader):
+def load_collection(collection: Sequence[DashboardCollection], loader):
     return loader.load_collections(
-        file=[collection],
+        file=collection,
         # use insert_ignore to avoid overwritting existing items or upsert to replace
         insert_mode=Methods.upsert,
     )
