@@ -1,9 +1,21 @@
 import os
+from typing import Dict, Union
 from getpass import getuser
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
-from . import config, dependencies, schemas, services
+
+from . import auth, config, helpers, schemas, dependencies, services
+# try:
+#     from . import auth, config, helpers, schemas, dependencies, services
+# except ImportError:
+#     import auth
+#     import config
+#     import helpers
+#     import schemas
+#     import dependencies
+#     import services
 
 
 settings = (
@@ -16,6 +28,8 @@ settings = (
     )
 )
 app = FastAPI(root_path=settings.root_path)
+
+# TODO: Handle verda-workdflows-api config
 
 
 @app.get(
@@ -96,6 +110,77 @@ def cancel_ingestion(
 
 @app.get("/auth/me")
 def who_am_i(claims=Depends(dependencies.decode_token)):
+    """
+    Return claims for the provided JWT
+    """
+    return claims
+
+
+# Endpoints from veda-workflows-api
+
+def get_data_pipeline_arn() -> str:
+    return settings.data_pipeline_arn
+
+
+@app.post(
+    "/token",
+    tags=["auth"],
+)
+async def get_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> Dict:
+    """
+    Get token from username and password
+    """
+    return auth.authenticate_and_get_token(
+        form_data.username, # TODO: Not initialized
+        form_data.password, # TODO: Not initialized
+        settings.userpool_id,
+        settings.client_id,
+        settings.client_secret,
+    )
+
+
+@app.post(
+    "/workflow-executions",
+    response_model=schemas.BaseResponse,
+    tags=["workflow-executions"],
+    status_code=201,
+)
+async def start_workflow_execution(
+    input: Union[schemas.CmrInput, schemas.S3Input] = Body(..., discriminator="discovery"),
+    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
+) -> schemas.BaseResponse:
+    """
+    Triggers the ingestion workflow
+    """
+    return helpers.trigger_discover(input, data_pipeline_arn)
+
+
+@app.get(
+    "/workflow-executions/{workflow_execution_id}",
+    response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],
+    tags=["workflow-executions"],
+    dependencies=[Depends(auth.get_username)]
+)
+async def get_workflow_execution_status(
+    workflow_execution_id: str,
+    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
+) -> Union[schemas.ExecutionResponse, schemas.BaseResponse]:
+    """
+    Returns the status of the workflow execution
+    """
+    return helpers.get_status(workflow_execution_id, data_pipeline_arn)
+
+
+# Similar to stac-ingestion
+@app.get(
+    "/whoami",
+    tags=["auth"],
+)
+def who_am_i(
+    claims=Depends(auth.decode_token),
+) -> str:
     """
     Return claims for the provided JWT
     """
