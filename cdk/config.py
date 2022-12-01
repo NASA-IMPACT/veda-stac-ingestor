@@ -1,10 +1,11 @@
 from getpass import getuser
 
 import aws_cdk
-from pydantic import BaseSettings, Field, HttpUrl, constr
+from pydantic import BaseSettings, Field, HttpUrl, constr, AnyHttpUrl
 
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
+AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
 
 
 class Deployment(BaseSettings):
@@ -40,6 +41,8 @@ class Deployment(BaseSettings):
     )
 
     userpool_id: str = Field(description="The Cognito Userpool used for authentication")
+    client_id: str = Field(description="The Cognito APP client ID")
+    client_secret: str = Field(description="The Cognito APP client secret")
 
     stac_db_secret_name: str = Field(
         description="Name of secret containing pgSTAC DB connection information"
@@ -56,9 +59,22 @@ class Deployment(BaseSettings):
         description="URL of STAC API",
     )
 
+    jwks_url: AnyHttpUrl = Field(
+        description="URL of JWKS, e.g. https://cognito-idp.{region}.amazonaws.com/{userpool_id}/.well-known/jwks.json"  # noqa
+    )
+
     data_access_role: AwsArn = Field(
         description="ARN of AWS Role used to validate access to S3 data"
     )
+
+    data_pipeline_arn: AwsStepArn = Field(
+        description="ARN of AWS step function used to trigger data ingestion"
+    )
+
+    class Config:
+        env_prefix = ""
+        case_sentive = False
+        env_file = '.env'
 
     @property
     def stack_name(self) -> str:

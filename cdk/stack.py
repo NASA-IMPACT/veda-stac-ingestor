@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_lambda_python_alpha,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
+    aws_cognito as cognito,
 )
 from constructs import Construct
 
@@ -104,6 +105,7 @@ class StacIngestionApi(Stack):
         table: dynamodb.ITable,
         env: Dict[str, str],
         data_access_role: iam.IRole,
+        user_pool: cognito.IUserPool,
         stage: str,
     ) -> apigateway.LambdaRestApi:
         handler_role = iam.Role(
@@ -136,6 +138,29 @@ class StacIngestionApi(Stack):
         data_access_role.grant(
             handler.grant_principal,
             "sts:AssumeRole",
+        )
+
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cognito-idp:AdminInitiateAuth"],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+
+        data_pipeline_arn = env.get("DATA_PIPELINE_ARN")
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["states:StartExecution"],
+                resources=[data_pipeline_arn],
+            )
+        )
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["states:DescribeExecution", "states:GetExecutionHistory"],
+                resources=[
+                    f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*" # noqa
+                ],
+            )
         )
         return handler
 
