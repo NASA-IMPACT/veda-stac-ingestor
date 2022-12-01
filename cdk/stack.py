@@ -34,6 +34,13 @@ class StacIngestionApi(Stack):
         data_access_role = iam.Role.from_role_arn(
             self, "data-access-role", config.data_access_role
         )
+
+        user_pool = cognito.UserPool.from_user_pool_id(
+            self,
+            "cognito-user-pool",
+            config.userpool_id
+        )
+
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
@@ -41,9 +48,18 @@ class StacIngestionApi(Stack):
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
+            "DATA_PIPELINE_ARN": config.data_pipeline_arn,
+            "USERPOOL_ID": config.userpool_id,
+            "CLIENT_ID": config.client_id,
+            "CLIENT_SECRET": config.client_secret,
         }
+
         handler = self.build_api_lambda(
-            table=table, env=env, data_access_role=data_access_role, stage=config.stage
+            table=table,
+            env=env,
+            data_access_role=data_access_role,
+            user_pool=user_pool,
+            stage=config.stage
         )
 
         self.build_api(
