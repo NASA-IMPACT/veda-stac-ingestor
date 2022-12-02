@@ -30,7 +30,6 @@ class Settings(BaseSettings):
     def from_ssm(cls, stack: str):
         return cls(_secrets_dir=f"/{stack}")
 
-    # config for workflows-api
     data_pipeline_arn: AwsStepArn = Field(
         description="ARN of AWS step function used to trigger data ingestion"
     )

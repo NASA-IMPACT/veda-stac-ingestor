@@ -36,9 +36,7 @@ class StacIngestionApi(Stack):
         )
 
         user_pool = cognito.UserPool.from_user_pool_id(
-            self,
-            "cognito-user-pool",
-            config.userpool_id
+            self, "cognito-user-pool", config.userpool_id
         )
 
         env = {
@@ -59,7 +57,7 @@ class StacIngestionApi(Stack):
             env=env,
             data_access_role=data_access_role,
             user_pool=user_pool,
-            stage=config.stage
+            stage=config.stage,
         )
 
         self.build_api(
@@ -174,7 +172,7 @@ class StacIngestionApi(Stack):
             iam.PolicyStatement(
                 actions=["states:DescribeExecution", "states:GetExecutionHistory"],
                 resources=[
-                    f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*" # noqa
+                    f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"  # noqa
                 ],
             )
         )

@@ -32,7 +32,10 @@ def s3_object_is_accessible(bucket: str, key: str):
             f"Asset not accessible: {e.__dict__['response']['Error']['Message']}"
         )
 
+
 functools.cache
+
+
 def s3_bucket_object_is_accessible(bucket: str, prefix: str):
     """
     Ensure we can send HEAD requests to S3 objects.
@@ -42,18 +45,17 @@ def s3_bucket_object_is_accessible(bucket: str, prefix: str):
         result = client.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=2)
     except client.exceptions.NoSuchBucket:
         raise ValueError("Bucket doesn't exist.")
-    content = result.get('Contents', [])
+    content = result.get("Contents", [])
     # if the prefix exists, but no items exist, the content still has one element
     if len(content) <= 1:
-        raise ValueError(
-            "No data in bucket/prefix."
-        )
+        raise ValueError("No data in bucket/prefix.")
     try:
-        client.head_object(Bucket=bucket, Key=content[0].get('Key'))
+        client.head_object(Bucket=bucket, Key=content[0].get("Key"))
     except client.exceptions.ClientError as e:
         raise ValueError(
             f"Asset not accessible: {e.__dict__['response']['Error']['Message']}"
         )
+
 
 def url_is_accessible(href: str):
     """

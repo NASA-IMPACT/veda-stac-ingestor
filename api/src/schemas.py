@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Literal
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator, root_validator
+from pydantic import (
+    BaseModel,
+    PositiveInt,
+    dataclasses,
+    error_wrappers,
+    validator,
+    root_validator,
+)
 from stac_pydantic import Item, shared
 
 from . import validators
@@ -50,7 +57,7 @@ class Status(str, enum.Enum):
             if member.value.lower() == value.lower():
                 return member
         return cls.unknown
-    
+
     started = "started"
     queued = "queued"
     failed = "failed"
@@ -148,9 +155,11 @@ class UpdateIngestionRequest(BaseModel):
 
 # veda-api
 
+
 class Discovery(str, enum.Enum):
     s3 = "s3"
     cmr = "cmr"
+
 
 class WorkflowInputBase(BaseModel):
     collection: str
@@ -178,9 +187,7 @@ class S3Input(WorkflowInputBase):
     @root_validator
     def is_accessible(cls, values):
         bucket, prefix = values.get("bucket"), values.get("prefix")
-        validators.s3_bucket_object_is_accessible(
-            bucket=bucket, prefix=prefix
-        )
+        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
         return values
 
 

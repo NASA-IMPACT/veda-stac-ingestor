@@ -23,16 +23,18 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
     """
     unique_key = str(uuid4())
 
-    client = boto3.client('stepfunctions')
+    client = boto3.client("stepfunctions")
     client.start_execution(
         stateMachineArn=data_pipeline_arn,
-        name=f'{EXECUTION_NAME_PREFIX}-{unique_key}',
-        input=input.json()
+        name=f"{EXECUTION_NAME_PREFIX}-{unique_key}",
+        input=input.json(),
     )
-    return BaseResponse(**{
-        "id": unique_key,
-        "status": Status.started,
-    })
+    return BaseResponse(
+        **{
+            "id": unique_key,
+            "status": Status.started,
+        }
+    )
 
 
 def _build_execution_arn(id: str, data_pipeline_arn: str) -> str:
@@ -54,53 +56,64 @@ def get_status(id: str, data_pipeline_arn: str) -> Dict:
         # Get the discovery scheduled event id
         discovery_scheduled_id = next(
             (
-                event["id"] for event in events
-                if (event["type"] == "TaskScheduled") and (params := json.loads(
-                    event["taskScheduledEventDetails"]["parameters"]
-                )) and (params.get("FunctionName", "").endswith(DISCOVERY_LAMBDA_SUFFIX))
-            ), None
+                event["id"]
+                for event in events
+                if (event["type"] == "TaskScheduled")
+                and (
+                    params := json.loads(
+                        event["taskScheduledEventDetails"]["parameters"]
+                    )
+                )
+                and (params.get("FunctionName", "").endswith(DISCOVERY_LAMBDA_SUFFIX))
+            ),
+            None,
         )
         # Get the first succeeded event after the discovery scheduled event,
         # this will be the discovery success event
-        return next(
-            (
-                event for event in events[discovery_scheduled_id - 1:]
-                if event["type"] == "TaskSucceeded"
-            ), None
-        ) if discovery_scheduled_id else None
+        return (
+            next(
+                (
+                    event
+                    for event in events[discovery_scheduled_id - 1 :]
+                    if event["type"] == "TaskSucceeded"
+                ),
+                None,
+            )
+            if discovery_scheduled_id
+            else None
+        )
 
-    client = boto3.client('stepfunctions')
+    client = boto3.client("stepfunctions")
     execution_arn = _build_execution_arn(id, data_pipeline_arn)
     try:
-        response = client.describe_execution(
-            executionArn=execution_arn
-        )
+        response = client.describe_execution(executionArn=execution_arn)
     except (client.exceptions.ExecutionDoesNotExist, client.exceptions.InvalidArn):
-        return BaseResponse(**{
-            "id": id,
-            "status": Status.nonexistent,
-        })
+        return BaseResponse(
+            **{
+                "id": id,
+                "status": Status.nonexistent,
+            }
+        )
 
     status = response["status"]
     extras = {}
     if status == "SUCCEEDED":
-        exec_history = client.get_execution_history(
-            executionArn=execution_arn
-        )
+        exec_history = client.get_execution_history(executionArn=execution_arn)
         events = exec_history.get("events")
         event = _find_discovery_success_event(events)
         if event:
-            payload = json.loads(event["taskSucceededEventDetails"]["output"])["Payload"]
+            payload = json.loads(event["taskSucceededEventDetails"]["output"])[
+                "Payload"
+            ]
             files = [Path(obj["s3_filename"]).stem for obj in payload["objects"]]
             cogify = payload["cogify"]
 
             extras = {
                 "discovered_files": files,
-                "message": f"Files queued to {'cogify' if cogify else 'stac-ready' } queue"
+                "message": f"Files queued to {'cogify' if cogify else 'stac-ready' } queue",
             }
 
-    return parse_obj_as(Union[ExecutionResponse, BaseResponse], {
-        "id": id,
-        "status": Status(status),
-        **extras
-    })
+    return parse_obj_as(
+        Union[ExecutionResponse, BaseResponse],
+        {"id": id, "status": Status(status), **extras},
+    )
