@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Union
+import requests
 from getpass import getuser
 
 from fastapi import Body, Depends, FastAPI, HTTPException
@@ -199,7 +200,7 @@ async def get_token(
 )
 def who_am_i(claims=Depends(auth.decode_token)):
 @app.post(
-    "/validate-dataset",
+    "/dataset/validate",
     tags=["Dataset"],
     dependencies=[Depends(dependencies.get_username)],
 )
@@ -221,6 +222,24 @@ def validate_dataset(dataset: schemas.Dataset):
             )
     return {f"Dataset metadata is valid and ready to be published - {dataset.collection}"}
 
+@app.post(
+    "/dataset/publish",
+    tags=["Dataset"],
+    dependencies=[Depends(dependencies.get_username)],
+)
+def validate_dataset(dataset: schemas.Dataset):
+    # Construct and load collection
+    collection = schemas.Collection(
+        id=dataset.collection,
+        title=dataset.title,
+        description=dataset.description,
+        keywords=dataset.keywords, # optional
+        license=dataset.license,
+        providers=dataset.providers, # optional
+        extent=dataset.extent, # TODO this needs to be fixed
+        summaries= '' # TODO fix
+        item_assets='' # TODO fix
+    )
 
 @app.get("/auth/me")
 def who_am_i(claims=Depends(dependencies.decode_token)):
