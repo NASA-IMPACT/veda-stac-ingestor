@@ -204,7 +204,22 @@ def who_am_i(claims=Depends(auth.decode_token)):
     dependencies=[Depends(dependencies.get_username)],
 )
 def validate_dataset(dataset: schemas.Dataset):
-    pass
+    # for all sample files in dataset, test access using raster /validate endpoint
+    for sample in dataset.sample_files:
+        url = f"{settings.raster_url}/cog/validate?url={sample}"
+        try:
+            response = requests.get(url)
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=(f"Unable to validate dataset: {response.text}"),
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Sample file {sample} is invalid: {e}"),
+            )
+    return {f"Dataset metadata is valid and ready to be published - {dataset.collection}"}
 
 
 @app.get("/auth/me")
