@@ -7,15 +7,6 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 
 from . import auth, config, helpers, schemas, dependencies, services
-# try:
-#     from . import auth, config, helpers, schemas, dependencies, services
-# except ImportError:
-#     import auth
-#     import config
-#     import helpers
-#     import schemas
-#     import dependencies
-#     import services
 
 
 settings = (
@@ -28,8 +19,6 @@ settings = (
     )
 )
 app = FastAPI(root_path=settings.root_path)
-
-# TODO: Handle verda-workdflows-api config
 
 
 @app.get(
@@ -133,8 +122,8 @@ async def get_token(
     Get token from username and password
     """
     return auth.authenticate_and_get_token(
-        form_data.username, # TODO: Not initialized
-        form_data.password, # TODO: Not initialized
+        form_data.username,
+        form_data.password,
         settings.userpool_id,
         settings.client_id,
         settings.client_secret,
@@ -171,17 +160,3 @@ async def get_workflow_execution_status(
     Returns the status of the workflow execution
     """
     return helpers.get_status(workflow_execution_id, data_pipeline_arn)
-
-
-# Similar to stac-ingestion
-@app.get(
-    "/whoami",
-    tags=["auth"],
-)
-def who_am_i(
-    claims=Depends(auth.decode_token),
-) -> str:
-    """
-    Return claims for the provided JWT
-    """
-    return claims
