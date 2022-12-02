@@ -210,3 +210,76 @@ class CmrInput(WorkflowInputBase):
     include: Optional[str]
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
+class Extent(BaseModel):
+    xmin: float
+    ymin: float
+    xmax: float
+    ymax: float
+    startdate: str
+    enddate: str
+
+    @validator('startdate', 'enddate')
+    def check_date(cls, v):
+        # date must match format: YYYY-MM-DDThh:mm:ssZ
+        # also accept +hh:mm instead of Z
+        # TODO we might be able to use the datetime library to do this
+        if not re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])', v):
+            raise ValueError('Invalid date format')
+        return v
+    
+    @root_validator
+    def check_extent(cls, v):
+        # mins must be below maxes
+        if v['xmin'] >= v['xmax'] or v['ymin'] >= v['ymax']:
+            raise ValueError('Invalid extent')
+        # ys must be within -90 and 90, x between -180 and 180
+        if v['xmin'] < -180 or v['xmax'] > 180 or v['ymin'] < -90 or v['ymax'] > 90:
+            raise ValueError('Invalid extent')
+        return v
+
+class Dataset(BaseModel):
+    collection: str
+    name: str
+    description: str
+    version: str
+    license: str
+    dashboard_is_periodic: bool
+    dashboard_time_density: str
+    extent: Extent
+    cogify: bool
+    s3_or_cmr: str
+    source_bucket: str
+    filename_prefix: str
+    filename_regex: str
+    datetime_range: str
+
+
+    @validator('license')
+    def check_license(cls, v):
+        # value must be one of: CC0 MIT
+        # TODO fill in rest of list
+        if v not in ['CC0']:
+            raise ValueError('Invalid license')
+        return v
+    
+    # time density must be one of month, day, year if periodic is true, otherwise it must be null
+    @root_validator
+    def check_time_density(cls, v):
+        if v['dashboard_is_periodic'] and v['dashboard_time_density'] not in ['month', 'day', 'year']:
+            raise ValueError('Invalid time density')
+        if not v['dashboard_is_periodic'] and v['dashboard_time_density'] is not None:
+            raise ValueError('Invalid time density')
+        return v
+    
+    # collection id must be all lowercase, with optional - delimiter
+    @validator('id')
+    def check_id(cls, v):
+        if not re.match(r'[a-z]+(?:-[a-z]+)*', v):
+            raise ValueError('Invalid id')
+        return v
+    # TODO - could we do a uniqueness check on the id? would require API call to get list of existing ids
+
+    @validator("collection")
+    def exists(cls, collection):
+        validators.collection_exists(collection_id=collection)
+        return collection
