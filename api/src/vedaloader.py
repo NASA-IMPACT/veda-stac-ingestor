@@ -1,4 +1,5 @@
 """Utilities to bulk load data into pgstac from json/ndjson."""
+from gc import collect
 import logging
 
 from pypgstac.load import Loader
@@ -24,8 +25,8 @@ class VEDALoader(Loader):
                     f"Updating dashboard summaries for collection: {collection_id}."
                 )
                 cur.execute(
-                    f"SELECT dashboard.\
-                        update_collection_default_summaries('{collection_id}')",
+                    "SELECT dashboard.update_collection_default_summaries(%s)",
+                    (collection_id,),
                 )
                 logger.info(f"Updating extents for collection: {collection_id}.")
                 cur.execute(
@@ -51,6 +52,4 @@ class VEDALoader(Loader):
         with self.conn.cursor() as cur:
             with self.conn.transaction():
                 logger.info(f"Deleting collection: {collection_id}.")
-                cur.execute(
-                    f"SELECT pgstac.delete_collection('{collection_id}');",
-                )
+                cur.execute("SELECT pgstac.delete_collection(%s);", (collection_id,))
