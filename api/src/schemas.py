@@ -211,22 +211,14 @@ class CmrInput(WorkflowInputBase):
     include: Optional[str]
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
+# TODO we want these validations but I also want to use the SpatialExtent and TemporalExtent models provided by stac_pydantic
 class Extent(BaseModel):
     xmin: float
     ymin: float
     xmax: float
     ymax: float
-    startdate: str
-    enddate: str
-
-    @validator('startdate', 'enddate')
-    def check_date(cls, v):
-        # date must match format: YYYY-MM-DDThh:mm:ssZ
-        # also accept +hh:mm instead of Z
-        # TODO we might be able to use the datetime library to do this
-        if not re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])', v):
-            raise ValueError('Invalid date format')
-        return v
+    startdate: datetime
+    enddate: datetime
     
     @root_validator
     def check_extent(cls, v):
@@ -240,7 +232,7 @@ class Extent(BaseModel):
 
 class Dataset(BaseModel):
     collection: str
-    name: str
+    title: str
     description: str
     version: str
     license: str
