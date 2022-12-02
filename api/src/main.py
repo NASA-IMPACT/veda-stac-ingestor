@@ -198,6 +198,17 @@ async def get_token(
     tags=["Auth"],
 )
 def who_am_i(claims=Depends(auth.decode_token)):
+@app.post(
+    "/validate-dataset",
+    tags=["Dataset"],
+    dependencies=[Depends(dependencies.get_username)],
+)
+def validate_dataset(dataset: schemas.Dataset):
+    pass
+
+
+@app.get("/auth/me")
+def who_am_i(claims=Depends(dependencies.decode_token)):
     """
     Return claims for the provided JWT
     """
