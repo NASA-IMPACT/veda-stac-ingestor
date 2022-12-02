@@ -2,6 +2,7 @@ import base64
 import binascii
 import enum
 import json
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional, Literal
@@ -252,13 +253,14 @@ class Dataset(BaseModel):
     filename_prefix: str
     filename_regex: str
     datetime_range: str
+    sample_files: List[str]
 
 
     @validator('license')
     def check_license(cls, v):
         # value must be one of: CC0 MIT
         # TODO fill in rest of list
-        if v not in ['CC0']:
+        if v not in ['CC0', 'MIT']:
             raise ValueError('Invalid license')
         return v
     
@@ -283,3 +285,13 @@ class Dataset(BaseModel):
     def exists(cls, collection):
         validators.collection_exists(collection_id=collection)
         return collection
+
+    # all sample files must begin with prefix and their last element must match regex
+    @root_validator
+    def check_sample_files(cls, v):
+        for file in v['sample_files']:
+            if not file.startswith(v['filename_prefix']):
+                raise ValueError('Invalid sample file')
+            if not re.match(v['filename_regex'], file.split('/')[-1]): # TODO this assumes that there is no recursion needed in the regex
+                raise ValueError('Invalid sample file')
+        return v
