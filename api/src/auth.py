@@ -11,11 +11,7 @@ from authlib.jose import JsonWebToken, JsonWebKey, KeySet, JWTClaims, errors
 from cachetools import cached, TTLCache
 from fastapi import Depends, HTTPException, security
 
-try:
-    from . import config, main
-except ImportError:
-    import config
-    import main
+from . import config
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +20,8 @@ token_scheme = security.HTTPBearer()
 
 
 def get_settings() -> config.Settings:
+    from . import main
+
     return main.settings
 
 
@@ -77,33 +75,35 @@ def _get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
     message = username + client_id
     dig = hmac.new(
         bytearray(client_secret, "utf-8"),
-        msg=message.encode('UTF-8'),
-        digestmod=hashlib.sha256).digest()
+        msg=message.encode("UTF-8"),
+        digestmod=hashlib.sha256,
+    ).digest()
     return base64.b64encode(dig).decode()
 
 
 def authenticate_and_get_token(
-    username: str, password: str,
+    username: str,
+    password: str,
     user_pool_id: str,
     app_client_id: str,
-    app_client_secret: str
+    app_client_secret: str,
 ) -> Dict:
-    client = boto3.client('cognito-idp')
+    client = boto3.client("cognito-idp")
     try:
         resp = client.admin_initiate_auth(
             UserPoolId=user_pool_id,
             ClientId=app_client_id,
-            AuthFlow='ADMIN_USER_PASSWORD_AUTH',
+            AuthFlow="ADMIN_USER_PASSWORD_AUTH",
             AuthParameters={
                 "USERNAME": username,
                 "PASSWORD": password,
                 "SECRET_HASH": _get_secret_hash(
                     username, app_client_id, app_client_secret
-                )
-            }
+                ),
+            },
         )
     except client.exceptions.NotAuthorizedException:
         return {
             "message": "Login failed, please make sure the username and password are correct."
         }
-    return resp['AuthenticationResult']
+    return resp["AuthenticationResult"]
