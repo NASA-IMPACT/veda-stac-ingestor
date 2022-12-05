@@ -110,7 +110,7 @@ def get_status(id: str, data_pipeline_arn: str) -> Dict:
 
             extras = {
                 "discovered_files": files,
-                "message": "Files queued to {'cogify' if cogify else 'stac-ready'} queue",  # noqa
+                "message": f"Files queued to {'cogify' if cogify else 'stac-ready'} queue",  # noqa
             }
 
     return parse_obj_as(
