@@ -97,7 +97,10 @@ def cancel_ingestion(
     return ingestion.cancel(db)
 
 
-@app.get("/auth/me")
+@app.get(
+    "/auth/me",
+    tags=["Auth"],
+)
 def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
@@ -111,7 +114,7 @@ def get_data_pipeline_arn() -> str:
 
 @app.post(
     "/token",
-    tags=["auth"],
+    tags=["Auth"],
 )
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
