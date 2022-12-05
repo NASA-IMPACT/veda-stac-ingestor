@@ -19,14 +19,18 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 ### Running API
 
 1. Create virtual environment:
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    ```
+
 1. Install dependencies:
+
    ```
    pip install -r api/requirements.txt
    ```
+
 1. Run API:
 
    ```
@@ -35,6 +39,10 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
    _Note:_ If no `.env` file is present, the API will connect to resources in the `dev` deployment via [pydantic-ssm-settings](https://github.com/developmentseed/pydantic-ssm-settings). This requires that your `AWS_PROFILE` be set to the profile associated with the AWS account hosting the `dev` deployment.
 
-# License
-This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
+## Using the API
 
+Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
+
+# License
+
+This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
