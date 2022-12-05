@@ -43,6 +43,6 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
 Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
 
-# License
+## License
 
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
