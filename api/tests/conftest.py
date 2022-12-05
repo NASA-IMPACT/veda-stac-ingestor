@@ -19,12 +19,13 @@ def test_environ():
     os.environ["CLIENT_ID"] = "fake_client_id"
     os.environ["CLIENT_SECRET"] = "fake_client_secret"
     os.environ["DATA_ACCESS_ROLE"] = "arn:aws:iam::123456789012:role/test-role"
-    os.environ["DATA_PIPELINE_ARN"] = "arn:aws:states:region:123456789012:stateMachine:test-pipeline"
+    os.environ[
+        "DATA_PIPELINE_ARN"
+    ] = "arn:aws:states:region:123456789012:stateMachine:test-pipeline"
     os.environ["DYNAMODB_TABLE"] = "test_table"
     os.environ["JWKS_URL"] = "https://test-jwks.url"
     os.environ["STAC_URL"] = "https://test-stac.url"
     os.environ["USERPOOL_ID"] = "fake_id"
-    
 
 
 @pytest.fixture

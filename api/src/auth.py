@@ -104,6 +104,6 @@ def authenticate_and_get_token(
         )
     except client.exceptions.NotAuthorizedException:
         return {
-            "message": "Login failed, please make sure the username and password are correct."
+            "message": "Login failed, please make sure the credentials are correct."
         }
     return resp["AuthenticationResult"]
