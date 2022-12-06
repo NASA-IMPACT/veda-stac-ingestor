@@ -167,9 +167,6 @@ class UpdateIngestionRequest(BaseModel):
     message: str = None
 
 
-# veda-api
-
-
 class Discovery(str, enum.Enum):
     s3 = "s3"
     cmr = "cmr"
