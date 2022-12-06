@@ -28,6 +28,10 @@ if TYPE_CHECKING:
 # Hack to avoid issues deserializing large values
 # https://github.com/boto/boto3/issues/2500#issuecomment-654925049
 boto3.dynamodb.types.DYNAMODB_CONTEXT = decimal.Context(prec=100)
+# Inhibit Inexact Exceptions
+boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Inexact] = 0
+# Inhibit Rounded Exceptions
+boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Rounded] = 0
 
 
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
@@ -82,15 +86,15 @@ def update_dynamodb(
 
 def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
     # Parse input
-    records = list(get_queued_ingestions(event["Records"]))
-    if not records:
+    ingestions = list(get_queued_ingestions(event["Records"]))
+    if not ingestions:
         print("No queued ingestions to process")
         return
 
-    ingestions = [
+    items = [
         # NOTE: Important to deserialize values to convert decimals to floats
-        convert_decimals_to_float(record.item)
-        for record in records
+        convert_decimals_to_float(ingestion.item)
+        for ingestion in ingestions
     ]
 
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
@@ -102,7 +106,7 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
         with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
             load_into_pgstac(
                 db=db,
-                ingestions=ingestions,
+                ingestions=items,
                 table=IngestionType.items,
             )
     except Exception as e:
