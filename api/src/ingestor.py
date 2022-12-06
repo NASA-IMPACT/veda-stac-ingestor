@@ -10,7 +10,8 @@ from boto3.dynamodb.types import TypeDeserializer
 import ddbcereal
 from pypgstac.db import PgstacDB
 
-from .dependencies import get_settings, get_table
+from .auth import get_settings
+from .dependencies import get_table
 from .schemas import Ingestion, Status
 from .utils import (
     IngestionType,
