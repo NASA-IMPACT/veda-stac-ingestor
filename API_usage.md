@@ -1,6 +1,9 @@
 # Guide on ingesting and publishing data to the VEDA data store & STAC API
 
-TODO: Talk about VEDA using STAC; catalog, collection and items
+VEDA uses a STAC catalog for data dissemination.
+Scientist publish the data to this STAC catalog to make it available to the users.
+
+Follow the guide below to publish datasets to the VEDA STAC catalog.
 
 ## Prepare the data
 
@@ -87,9 +90,83 @@ headers = {
 
 ```
 
+#### Ingest the collection
+
+You'll first need to create a collection for your dataset.
+Before you can do that, you'll need metadata about the collection like the spatial and temporal extent, license, etc. See the `body` in the code snippet below.
+
+Then, use the code snippet below to publish the collection.
+
+```python
+# url for collection ingestion
+collection_ingestion_url = f"{base_url}/collections"
+
+# prepare the body of the request,
+# for a collection, it is a valid STAC record for the collection
+
+body = {
+    "id": "demo-social-vulnerability-index-overall",
+    "type": "Collection",
+    "title": "(Demo) Social Vulnerability Index (Overall)",
+    "description": "Overall Social Vulnerability Index - Percentile ranking",
+    "stac_version": "1.0.0",
+    "license": "MIT",
+    "links": [],
+    "extent": {
+        "spatial": {
+            "bbox": [
+                [
+                    -178.23333334,
+                    18.908332897999998,
+                    -66.958333785,
+                    71.383332688
+                ]
+            ]
+        },
+        "temporal": {
+            "interval": [
+                [
+                    "2000-01-01T00:00:00Z",
+                    "2018-01-01T00:00:00Z"
+                ]
+            ]
+        }
+    },
+    "dashboard:is_periodic": False,
+    "dashboard:time_density": "year",
+    "item_assets": {
+        "cog_default": {
+            "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+            "roles": [
+                "data",
+                "layer"
+            ],
+            "title": "Default COG Layer",
+            "description": "Cloud optimized default layer to display on map"
+        }
+    }
+}
+
+# make the requests with the body and headers
+response = requests.post(
+    collection_ingestion_url,
+    headers=headers,
+    json=body
+)
+
+# look at the response
+if response.ok:
+    print(response.json())
+else:
+    print("Error")
+```
+
 #### Ingest items to a collection
 
-**Important**: Make sure that the respective collection is already published.
+Make sure that the respective collection is already published using the instructions above.
+Now you're ready to ingest the items to that collection.
+
+Follow the example below to ingest items to a collection:
 
 ```python
 # url for workflow execution
