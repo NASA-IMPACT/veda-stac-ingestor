@@ -2,6 +2,8 @@ import boto3
 import functools
 import requests
 
+from typing import Dict
+
 
 @functools.lru_cache()
 def get_s3_credentials():
@@ -67,6 +69,16 @@ def url_is_accessible(href: str):
         raise ValueError(
             f"Asset not accessible: {e.response.status_code} {e.response.reason}"
         )
+
+
+def cog_default_exists(item_assets: Dict):
+    """
+    Ensures `cog_default` key exists in item_assets in a collection
+    """
+    try:
+        item_assets["cog_default"]
+    except KeyError:
+        raise ValueError("Collection doesn't have a default cog placeholder")
 
 
 @functools.lru_cache()
