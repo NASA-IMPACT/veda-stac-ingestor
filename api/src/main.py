@@ -108,7 +108,7 @@ def cancel_ingestion(
     "/collections",
     tags=["Collection"],
     status_code=201,
-    dependencies=[Depends(dependencies.get_username)],
+    dependencies=[Depends(auth.get_username)],
 )
 def publish_collection(collection: schemas.DashboardCollection):
     # pgstac create collection
@@ -125,7 +125,7 @@ def publish_collection(collection: schemas.DashboardCollection):
 @app.delete(
     "/collections/{collection_id}",
     tags=["Collection"],
-    dependencies=[Depends(dependencies.get_username)],
+    dependencies=[Depends(auth.get_username)],
 )
 def delete_collection(collection_id: str):
     try:
