@@ -35,6 +35,30 @@ def s3_object_is_accessible(bucket: str, key: str):
         )
 
 
+functools.cache
+
+
+def s3_bucket_object_is_accessible(bucket: str, prefix: str):
+    """
+    Ensure we can send HEAD requests to S3 objects.
+    """
+    client = boto3.client("s3", **get_s3_credentials())
+    try:
+        result = client.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=2)
+    except client.exceptions.NoSuchBucket:
+        raise ValueError("Bucket doesn't exist.")
+    content = result.get("Contents", [])
+    # if the prefix exists, but no items exist, the content still has one element
+    if len(content) <= 1:
+        raise ValueError("No data in bucket/prefix.")
+    try:
+        client.head_object(Bucket=bucket, Key=content[0].get("Key"))
+    except client.exceptions.ClientError as e:
+        raise ValueError(
+            f"Asset not accessible: {e.__dict__['response']['Error']['Message']}"
+        )
+
+
 def url_is_accessible(href: str):
     """
     Ensure URLs are accessible via HEAD requests.

@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_lambda_python_alpha,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
+    aws_cognito as cognito,
 )
 from constructs import Construct
 
@@ -33,6 +34,11 @@ class StacIngestionApi(Stack):
         data_access_role = iam.Role.from_role_arn(
             self, "data-access-role", config.data_access_role
         )
+
+        user_pool = cognito.UserPool.from_user_pool_id(
+            self, "cognito-user-pool", config.userpool_id
+        )
+
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
@@ -40,6 +46,10 @@ class StacIngestionApi(Stack):
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
+            "DATA_PIPELINE_ARN": config.data_pipeline_arn,
+            "USERPOOL_ID": config.userpool_id,
+            "CLIENT_ID": config.client_id,
+            "CLIENT_SECRET": config.client_secret,
         }
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
         db_vpc = ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
@@ -53,6 +63,7 @@ class StacIngestionApi(Stack):
             table=table,
             env=env,
             data_access_role=data_access_role,
+            user_pool=user_pool,
             stage=config.stage,
             db_secret=db_secret,
             db_vpc=db_vpc,
@@ -115,6 +126,7 @@ class StacIngestionApi(Stack):
         table: dynamodb.ITable,
         env: Dict[str, str],
         data_access_role: iam.IRole,
+        user_pool: cognito.IUserPool,
         stage: str,
         db_secret: secretsmanager.ISecret,
         db_vpc: ec2.IVpc,
@@ -158,6 +170,29 @@ class StacIngestionApi(Stack):
         data_access_role.grant(
             handler.grant_principal,
             "sts:AssumeRole",
+        )
+
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cognito-idp:AdminInitiateAuth"],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+
+        data_pipeline_arn = env.get("DATA_PIPELINE_ARN")
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["states:StartExecution"],
+                resources=[data_pipeline_arn],
+            )
+        )
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["states:DescribeExecution", "states:GetExecutionHistory"],
+                resources=[
+                    f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"  # noqa
+                ],
+            )
         )
         # Allow handler to read DB secret
         db_secret.grant_read(handler)

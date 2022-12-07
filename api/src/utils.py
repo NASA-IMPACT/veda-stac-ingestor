@@ -63,22 +63,6 @@ def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def load_into_pgstac(
-    db: "PgstacDB",
-    ingestions: Union[Sequence[AccessibleItem], Sequence[DashboardCollection]],
-    table: IngestionType,
-):
-    """
-    Bulk insert STAC records into pgSTAC.
-    The ingestion can be items or collection, determined by the `table` arg.
-    """
-    loader = VEDALoader(db=db)
-    loading_function = load_items
-    if table == IngestionType.collections:
-        loading_function = load_collection
-    return loading_function(ingestions, loader)
-
-
 def load_items(items: Sequence[AccessibleItem], loader):
     """
     Loads items into the PgSTAC database and
@@ -91,7 +75,7 @@ def load_items(items: Sequence[AccessibleItem], loader):
     )
 
     # Trigger update on summaries and extents
-    collections = set([item.collection for item in items])
+    collections = set([item["collection"] for item in items])
     for collection in collections:
         loader.update_collection_summaries(collection)
 
@@ -107,3 +91,19 @@ def load_collection(collection: Sequence[DashboardCollection], loader):
         # use insert_ignore to avoid overwritting existing items or upsert to replace
         insert_mode=Methods.upsert,
     )
+
+
+def load_into_pgstac(
+    db: "PgstacDB",
+    ingestions: Union[Sequence[AccessibleItem], Sequence[DashboardCollection]],
+    table: IngestionType,
+):
+    """
+    Bulk insert STAC records into pgSTAC.
+    The ingestion can be items or collection, determined by the `table` arg.
+    """
+    loader = VEDALoader(db=db)
+    loading_function = load_items
+    if table == IngestionType.collections:
+        loading_function = load_collection
+    return loading_function(ingestions, loader)

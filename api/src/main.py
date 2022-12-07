@@ -1,10 +1,20 @@
 import os
+from typing import Dict, Union
 from getpass import getuser
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
-from . import config, dependencies, schemas, services, collection as collection_loader
 
+from . import (
+    auth,
+    config,
+    dependencies,
+    helpers,
+    schemas,
+    services,
+    collection as collection_loader,
+)
 
 settings = (
     config.Settings()
@@ -38,7 +48,7 @@ async def list_ingestions(
 )
 async def create_ingestion(
     item: schemas.AccessibleItem,
-    username: str = Depends(dependencies.get_username),
+    username: str = Depends(auth.get_username),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
     return schemas.Ingestion(
@@ -98,7 +108,7 @@ def cancel_ingestion(
     "/collections",
     tags=["Collection"],
     status_code=201,
-    dependencies=[Depends(dependencies.get_username)],
+    dependencies=[Depends(auth.get_username)],
 )
 def publish_collection(collection: schemas.DashboardCollection):
     # pgstac create collection
@@ -115,7 +125,7 @@ def publish_collection(collection: schemas.DashboardCollection):
 @app.delete(
     "/collections/{collection_id}",
     tags=["Collection"],
-    dependencies=[Depends(dependencies.get_username)],
+    dependencies=[Depends(auth.get_username)],
 )
 def delete_collection(collection_id: str):
     try:
@@ -126,8 +136,68 @@ def delete_collection(collection_id: str):
         raise HTTPException(status_code=400, detail=(f"{e}"))
 
 
-@app.get("/auth/me")
-def who_am_i(claims=Depends(dependencies.decode_token)):
+def get_data_pipeline_arn() -> str:
+    return settings.data_pipeline_arn
+
+
+@app.post(
+    "/workflow-executions",
+    response_model=schemas.BaseResponse,
+    tags=["Workflow-Executions"],
+    status_code=201,
+)
+async def start_workflow_execution(
+    input: Union[schemas.CmrInput, schemas.S3Input] = Body(
+        ..., discriminator="discovery"
+    ),
+    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
+) -> schemas.BaseResponse:
+    """
+    Triggers the ingestion workflow
+    """
+    return helpers.trigger_discover(input, data_pipeline_arn)
+
+
+@app.get(
+    "/workflow-executions/{workflow_execution_id}",
+    response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],
+    tags=["Workflow-Executions"],
+    dependencies=[Depends(auth.get_username)],
+)
+async def get_workflow_execution_status(
+    workflow_execution_id: str,
+    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
+) -> Union[schemas.ExecutionResponse, schemas.BaseResponse]:
+    """
+    Returns the status of the workflow execution
+    """
+    return helpers.get_status(workflow_execution_id, data_pipeline_arn)
+
+
+@app.post(
+    "/token",
+    tags=["Auth"],
+)
+async def get_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> Dict:
+    """
+    Get token from username and password
+    """
+    return auth.authenticate_and_get_token(
+        form_data.username,
+        form_data.password,
+        settings.userpool_id,
+        settings.client_id,
+        settings.client_secret,
+    )
+
+
+@app.get(
+    "/auth/me",
+    tags=["Auth"],
+)
+def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
     """
