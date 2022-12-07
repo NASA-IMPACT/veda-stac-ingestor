@@ -1,10 +1,13 @@
 import os
 from typing import Dict, Union
 import requests
+from typing import Union
 from getpass import getuser
 
-from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 
 
 from . import (
@@ -206,20 +209,21 @@ def who_am_i(claims=Depends(auth.decode_token)):
 )
 def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
-    for sample in dataset.sample_files:
-        url = f"{settings.raster_url}/cog/validate?url={sample}"
-        try:
-            response = requests.get(url)
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=(f"Unable to validate dataset: {response.text}"),
-                )
-        except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=(f"Sample file {sample} is invalid: {e}"),
-            )
+    # TODO this is commented out until the raster API fixes this endpoint
+    #for sample in dataset.sample_files:
+    #    url = f"{settings.raster_url}/cog/validate?url={sample}"
+    #    try:
+    #        response = requests.get(url)
+    #        if response.status_code != 200:
+    #            raise HTTPException(
+    #                status_code=response.status_code,
+    #                detail=(f"Unable to validate dataset: {response.text}"),
+    #            )
+    #    except Exception as e:
+    #        raise HTTPException(
+    #            status_code=400,
+    #            detail=(f"Sample file {sample} is invalid: {e}"),
+    #        )
     return {f"Dataset metadata is valid and ready to be published - {dataset.collection}"}
 
 @app.post(
@@ -227,19 +231,24 @@ def validate_dataset(dataset: schemas.Dataset):
     tags=["Dataset"],
     dependencies=[Depends(dependencies.get_username)],
 )
-def validate_dataset(dataset: schemas.Dataset):
+def publish_dataset(dataset: schemas.Dataset):
     # Construct and load collection
-    collection = schemas.Collection(
-        id=dataset.collection,
-        title=dataset.title,
-        description=dataset.description,
-        keywords=dataset.keywords, # optional
-        license=dataset.license,
-        providers=dataset.providers, # optional
-        extent=dataset.extent, # TODO this needs to be fixed
-        summaries= '' # TODO fix
-        item_assets='' # TODO fix
-    )
+    #collection = schemas.Collection(
+    #    id=dataset.collection,
+    #    title=dataset.title,
+    #    description=dataset.description,
+    #    license=dataset.license,
+    #    extent=dataset.extent, # TODO this needs to be fixed
+    #    summaries= '', # TODO fix
+    #    item_assets='' # TODO fix
+    #)
+    ## collection_loader.ingest(collection)
+    #print(collection)
+    # Construct and load items
+    for discovery in dataset.discovery_items:
+        discovery.collection = dataset.collection
+        print(jsonable_encoder(discovery))
+    
 
 @app.get("/auth/me")
 def who_am_i(claims=Depends(dependencies.decode_token)):
@@ -247,3 +256,10 @@ def who_am_i(claims=Depends(dependencies.decode_token)):
     Return claims for the provided JWT
     """
     return claims
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
+    )

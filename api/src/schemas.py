@@ -5,7 +5,8 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional, Literal
+from typing import TYPE_CHECKING, Dict, List, Optional, Literal, Union
+from typing_extensions import Annotated
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
@@ -17,7 +18,11 @@ from pydantic import (
     validator,
     root_validator,
     Field,
+    root_validator,
+    Extra,
+    ValidationError
 )
+
 from stac_pydantic import Item, Collection, shared
 
 from . import validators
@@ -230,23 +235,47 @@ class Extent(BaseModel):
             raise ValueError('Invalid extent')
         return v
 
+# Not to be confused with the stac_pydantic Item model - these define the inputs for the `insert-item` workflows
+class Item(BaseModel):
+    collection: Optional[str]
+    cogify: bool = False
+    upload: bool = False
+    dry_run: bool = False
+
+class s3Item(Item):
+    discovery: Literal['s3']
+    # for s3
+    prefix: str
+    bucket: str
+    filename_regex : str
+    datetime_range: Optional[str] # literal (month, day, year)
+    start_datetime: datetime
+    end_datetime: datetime
+
+class cmrItem(Item):
+    discovery: Literal['cmr']
+    # for cmr
+    version: str
+    temporal : List[str]
+    bounding_box: str
+    include: str
+
+# not a great name, but allows the construction of models with a list of discriminated unions
+ItemUnion = Annotated[Union[s3Item, cmrItem], Field(discriminator='discovery')]
+
 class Dataset(BaseModel):
     collection: str
     title: str
     description: str
-    version: str
     license: str
     dashboard_is_periodic: bool
     dashboard_time_density: str
     extent: Extent
-    cogify: bool
-    s3_or_cmr: str
-    source_bucket: str
-    filename_prefix: str
-    filename_regex: str
-    datetime_range: str
-    sample_files: List[str]
+    sample_files: List[str] # TODO how to do with CMR?
+    discovery_items : List[ItemUnion]
 
+    class Config:
+        extra = Extra.allow
 
     @validator('license')
     def check_license(cls, v):
@@ -261,29 +290,41 @@ class Dataset(BaseModel):
     def check_time_density(cls, v):
         if v['dashboard_is_periodic'] and v['dashboard_time_density'] not in ['month', 'day', 'year']:
             raise ValueError('Invalid time density')
-        if not v['dashboard_is_periodic'] and v['dashboard_time_density'] is not None:
+        if not v['dashboard_is_periodic'] and v['dashboard_time_density'] != 'null':
             raise ValueError('Invalid time density')
         return v
     
     # collection id must be all lowercase, with optional - delimiter
-    @validator('id')
+    @validator('collection')
     def check_id(cls, v):
         if not re.match(r'[a-z]+(?:-[a-z]+)*', v):
             raise ValueError('Invalid id')
         return v
-    # TODO - could we do a uniqueness check on the id? would require API call to get list of existing ids
 
     @validator("collection")
-    def exists(cls, collection):
-        validators.collection_exists(collection_id=collection)
-        return collection
+    def exists(cls, v):
+        validators.collection_exists(collection_id=v)
+        return v
 
     # all sample files must begin with prefix and their last element must match regex
     @root_validator
     def check_sample_files(cls, v):
+        if 's3' not in [item.discovery for item in v['discovery_items']]:
+            print('No s3 discovery items to validate sample files against')
+            return v
+        # TODO cmr handling/validation
+        valid_matches = []
+        for item in v['discovery_items']:
+            if item.discovery == 's3':
+                valid_matches.append(
+                    {
+                        'prefix': item.prefix,
+                        'regex': item.filename_regex
+                    }
+                )
         for file in v['sample_files']:
-            if not file.startswith(v['filename_prefix']):
-                raise ValueError('Invalid sample file')
-            if not re.match(v['filename_regex'], file.split('/')[-1]): # TODO this assumes that there is no recursion needed in the regex
-                raise ValueError('Invalid sample file')
+            if not any([file.startswith(match['prefix']) for match in valid_matches]):
+                raise ValidationError(f'Invalid sample file - {file} doesn\'t match prefix')
+            if not any([re.match(match['regex'], file.split('/')[-1]) for match in valid_matches]):
+                raise ValidationError(f'Invalid sample file - {file} doesn\'t match regex')
         return v
