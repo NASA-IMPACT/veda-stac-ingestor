@@ -2,19 +2,23 @@ from datetime import datetime
 import os
 import decimal
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Sequence
+from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence
+
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 import ddbcereal
-import orjson
-import pydantic
-from pypgstac.load import Methods
 from pypgstac.db import PgstacDB
 
-from .dependencies import get_settings, get_table
+from .auth import get_settings
+from .dependencies import get_table
 from .schemas import Ingestion, Status
-from .vedaloader import VEDALoader
+from .utils import (
+    IngestionType,
+    get_db_credentials,
+    convert_decimals_to_float,
+    load_into_pgstac,
+)
 
 if TYPE_CHECKING:
     from aws_lambda_typing import context as context_, events
@@ -24,9 +28,16 @@ if TYPE_CHECKING:
 # Hack to avoid issues deserializing large values
 # https://github.com/boto/boto3/issues/2500#issuecomment-654925049
 boto3.dynamodb.types.DYNAMODB_CONTEXT = decimal.Context(prec=100)
+# Inhibit Inexact Exceptions
+boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Inexact] = 0
+# Inhibit Rounded Exceptions
+boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Rounded] = 0
 
 
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
+    """
+    Get stream of ingestions that have been queue in the dynamodb database
+    """
     deserializer = TypeDeserializer()
     for record in records:
         # Parse Record
@@ -47,78 +58,6 @@ def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion
         ingestion = Ingestion.construct(**parsed)
         if ingestion.status == Status.queued:
             yield ingestion
-
-
-class DbCreds(pydantic.BaseModel):
-    username: str
-    password: str
-    host: str
-    port: int
-    dbname: str
-    engine: str
-
-    @property
-    def dsn_string(self) -> str:
-        return f"{self.engine}://{self.username}:{self.password}@{self.host}:{self.port}/{self.dbname}"  # noqa
-
-
-def get_db_credentials(secret_arn: str) -> DbCreds:
-    """
-    Load pgSTAC database credentials from AWS Secrets Manager.
-    """
-    print("Fetching DB credentials...")
-    session = boto3.session.Session(region_name=secret_arn.split(":")[3])
-    client = session.client(service_name="secretsmanager")
-    response = client.get_secret_value(SecretId=secret_arn)
-    return DbCreds.parse_raw(response["SecretString"])
-
-
-def convert_decimals_to_float(item: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    DynamoDB stores floats as Decimals. We want to convert them back to floats
-    before inserting them into pgSTAC to avoid any issues when the records are
-    converted to JSON by pgSTAC.
-    """
-
-    def decimal_to_float(obj):
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
-        raise TypeError
-
-    return orjson.loads(
-        orjson.dumps(
-            item,
-            default=decimal_to_float,
-        )
-    )
-
-
-def load_into_pgstac(creds: DbCreds, ingestions: Sequence[Ingestion]):
-    """
-    Bulk insert STAC records into pgSTAC.
-    """
-    with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-        loader = VEDALoader(db=db)
-
-        items = [
-            # NOTE: Important to deserialize values to convert decimals to floats
-            convert_decimals_to_float(i.item)
-            for i in ingestions
-        ]
-
-        print(f"Ingesting {len(items)} items")
-        loading_result = loader.load_items(
-            file=items,
-            # use insert_ignore to avoid overwritting existing items or upsert to replace
-            insert_mode=Methods.upsert,
-        )
-
-        # Trigger update on summaries and extents
-        collections = set([item["collection"] for item in items])
-        for collection in collections:
-            loader.update_collection_summaries(collection)
-
-        return loading_result
 
 
 def update_dynamodb(
@@ -152,14 +91,24 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
         print("No queued ingestions to process")
         return
 
+    items = [
+        # NOTE: Important to deserialize values to convert decimals to floats
+        convert_decimals_to_float(ingestion.item)
+        for ingestion in ingestions
+    ]
+
+    creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
+
     # Insert into PgSTAC DB
     outcome = Status.succeeded
     message = None
     try:
-        load_into_pgstac(
-            creds=get_db_credentials(os.environ["DB_SECRET_ARN"]),
-            ingestions=ingestions,
-        )
+        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
+            load_into_pgstac(
+                db=db,
+                ingestions=items,
+                table=IngestionType.items,
+            )
     except Exception as e:
         traceback.print_exc()
         print(f"Encountered failure loading items into pgSTAC: {e}")

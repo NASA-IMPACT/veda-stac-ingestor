@@ -4,12 +4,20 @@ import enum
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Literal
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, PositiveInt, dataclasses, error_wrappers, validator
-from stac_pydantic import Item, shared
+from pydantic import (
+    BaseModel,
+    PositiveInt,
+    dataclasses,
+    error_wrappers,
+    validator,
+    root_validator,
+    Field,
+)
+from stac_pydantic import Item, Collection, shared
 
 from . import validators
 
@@ -43,11 +51,42 @@ class AccessibleItem(Item):
         return collection
 
 
+class DashboardCollection(Collection):
+    is_periodic: bool = Field(alias="dashboard:is_periodic")
+    time_density: Literal["day", "month", "year", "null"] = Field(
+        alias="dashboard:time_density", default="null"
+    )
+    item_assets: Dict
+
+    @validator("item_assets")
+    def cog_default_exists(cls, item_assets):
+        validators.cog_default_exists(item_assets=item_assets)
+        return item_assets
+
+
 class Status(str, enum.Enum):
+    @classmethod
+    def _missing_(cls, value):
+        for member in cls:
+            if member.value.lower() == value.lower():
+                return member
+        return cls.unknown
+
+    started = "started"
     queued = "queued"
     failed = "failed"
     succeeded = "succeeded"
     cancelled = "cancelled"
+
+
+class BaseResponse(BaseModel):
+    id: str
+    status: Status
+
+
+class ExecutionResponse(BaseResponse):
+    message: str
+    discovered_files: List[str]
 
 
 class Ingestion(BaseModel):
@@ -126,3 +165,48 @@ class ListIngestionResponse(BaseModel):
 class UpdateIngestionRequest(BaseModel):
     status: Status = None
     message: str = None
+
+
+class Discovery(str, enum.Enum):
+    s3 = "s3"
+    cmr = "cmr"
+
+
+class WorkflowInputBase(BaseModel):
+    collection: str
+    discovery: Discovery
+    upload: Optional[bool] = False
+    cogify: Optional[bool] = False
+
+    @validator("collection")
+    def exists(cls, collection):
+        validators.collection_exists(collection_id=collection)
+        return collection
+
+
+class S3Input(WorkflowInputBase):
+    # s3 discovery
+    discovery: Literal[Discovery.s3]
+
+    prefix: str
+    bucket: str
+    filename_regex: Optional[str]
+    start_datetime: Optional[datetime]
+    end_datetime: Optional[datetime]
+    single_datetime: Optional[datetime]
+
+    @root_validator
+    def is_accessible(cls, values):
+        bucket, prefix = values.get("bucket"), values.get("prefix")
+        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
+        return values
+
+
+class CmrInput(WorkflowInputBase):
+    # cmr discovery
+    discovery: Literal[Discovery.cmr]
+
+    version: Optional[str]
+    include: Optional[str]
+    temporal: Optional[List[datetime]]
+    bounding_box: Optional[List[float]]

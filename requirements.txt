@@ -10,3 +10,4 @@ moto[s3,dynamodb]
 pytest
 pydantic
 python-dotenv
+python-multipart

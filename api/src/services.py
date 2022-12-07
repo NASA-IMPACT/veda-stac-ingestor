@@ -1,12 +1,17 @@
 from typing import TYPE_CHECKING, List
+import decimal
 
 from boto3.dynamodb import conditions
+from boto3.dynamodb.types import DYNAMODB_CONTEXT
 from pydantic import parse_obj_as
 
 from . import schemas
 
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
+
+
+DYNAMODB_CONTEXT.traps[decimal.Rounded] = 0
 
 
 class Database:
