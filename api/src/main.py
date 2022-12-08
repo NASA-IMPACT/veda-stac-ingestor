@@ -233,15 +233,16 @@ def validate_dataset(dataset: schemas.Dataset):
 )
 def publish_dataset(dataset: schemas.Dataset):
     # Construct and load collection
-    #collection = schemas.Collection(
-    #    id=dataset.collection,
-    #    title=dataset.title,
-    #    description=dataset.description,
-    #    license=dataset.license,
-    #    extent=dataset.extent, # TODO this needs to be fixed
-    #    summaries= '', # TODO fix
-    #    item_assets='' # TODO fix
-    #)
+    
+    collection = schemas.Collection(
+        id=dataset.collection,
+        title=dataset.title,
+        description=dataset.description,
+        license=dataset.license,
+        extent=.Extent(dataset.extent, # TODO this needs to be fixed
+        summaries= '', # TODO fix
+        item_assets='' # TODO fix
+    )
     ## collection_loader.ingest(collection)
     #print(collection)
     # Construct and load items

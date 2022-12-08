@@ -229,10 +229,16 @@ class Extent(BaseModel):
     def check_extent(cls, v):
         # mins must be below maxes
         if v['xmin'] >= v['xmax'] or v['ymin'] >= v['ymax']:
-            raise ValueError('Invalid extent')
+            raise ValueError('Invalid extent - xmin must be less than xmax, ymin less than ymax')
         # ys must be within -90 and 90, x between -180 and 180
         if v['xmin'] < -180 or v['xmax'] > 180 or v['ymin'] < -90 or v['ymax'] > 90:
-            raise ValueError('Invalid extent')
+            raise ValueError('Invalid extent - coordinates must be within -180, 180 and -90, 90')
+        return v
+
+    @root_validator
+    def check_dates(cls, v):
+        if v['startdate'] >= v['enddate']:
+            raise ValueError('Invalid extent - startdate must be before enddate')
         return v
 
 # Not to be confused with the stac_pydantic Item model - these define the inputs for the `insert-item` workflows
