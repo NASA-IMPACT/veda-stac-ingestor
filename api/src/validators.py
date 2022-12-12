@@ -35,7 +35,7 @@ def s3_object_is_accessible(bucket: str, key: str):
         )
 
 
-
+@functools.cache
 def s3_bucket_object_is_accessible(bucket: str, prefix: str):
     """
     Ensure we can send HEAD requests to S3 objects.
