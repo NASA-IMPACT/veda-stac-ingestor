@@ -35,8 +35,6 @@ def s3_object_is_accessible(bucket: str, key: str):
         )
 
 
-functools.cache
-
 
 def s3_bucket_object_is_accessible(bucket: str, prefix: str):
     """

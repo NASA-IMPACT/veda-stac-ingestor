@@ -5,10 +5,12 @@ from typing import Union
 from getpass import getuser
 
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Body
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-
+from fastapi.responses import JSONResponse
+from stac_pydantic.collection import SpatialExtent, Extent, TimeInterval
+from pydantic import ValidationError
 
 from . import (
     auth,
@@ -196,20 +198,16 @@ async def get_token(
         settings.client_secret,
     )
 
-
-@app.get(
-    "/auth/me",
-    tags=["Auth"],
-)
-def who_am_i(claims=Depends(auth.decode_token)):
 @app.post(
     "/dataset/validate",
     tags=["Dataset"],
-    dependencies=[Depends(dependencies.get_username)],
+    #dependencies=[Depends(auth.get_username)],
 )
 def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
     # TODO this is commented out until the raster API fixes this endpoint
+    # https://github.com/NASA-IMPACT/delta-backend/issues/133
+
     #for sample in dataset.sample_files:
     #    url = f"{settings.raster_url}/cog/validate?url={sample}"
     #    try:
@@ -221,7 +219,7 @@ def validate_dataset(dataset: schemas.Dataset):
     #            )
     #    except Exception as e:
     #        raise HTTPException(
-    #            status_code=400,
+    #            status_code=422,
     #            detail=(f"Sample file {sample} is invalid: {e}"),
     #        )
     return {f"Dataset metadata is valid and ready to be published - {dataset.collection}"}
@@ -229,38 +227,58 @@ def validate_dataset(dataset: schemas.Dataset):
 @app.post(
     "/dataset/publish",
     tags=["Dataset"],
-    dependencies=[Depends(dependencies.get_username)],
+    dependencies=[Depends(auth.get_username)]
 )
 def publish_dataset(dataset: schemas.Dataset):
     # Construct and load collection
-    
-    collection = schemas.Collection(
+    collection = schemas.DashboardCollection(
         id=dataset.collection,
         title=dataset.title,
         description=dataset.description,
         license=dataset.license,
-        extent=.Extent(dataset.extent, # TODO this needs to be fixed
-        summaries= '', # TODO fix
-        item_assets='' # TODO fix
+        extent={
+            "spatial": {
+                "bbox": [list(dataset.spatial_extent.dict().values())]
+            }, 
+            "temporal": {
+                "interval": [list(dataset.temporal_extent.dict().values())] # TODO collection not supporting datetimes
+            }
+        },
+        dashboard_is_periodic=dataset.dashboard_is_periodic, # not being picked up by collection Pydantic?
+        dashboard_time_density=dataset.dashboard_time_density,
+        item_assets={
+            "cog_default":{
+                "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+                "roles": [
+                    "data",
+                    "layer"
+                ],
+                "title": "Default COG Layer",
+                "description": "Cloud optimized default layer to display on map"
+            }
+        },
+        stac_version="1.0.0",
+        links=[],
+        type="Collection"
     )
-    ## collection_loader.ingest(collection)
-    #print(collection)
-    # Construct and load items
+    publish_collection(collection)
+    #Construct and load items
     for discovery in dataset.discovery_items:
         discovery.collection = dataset.collection
-        print(jsonable_encoder(discovery))
+        start_workflow_execution(discovery)
+    return {f"Successfully published dataset: {dataset.collection}\n Initiated workflows for {len(dataset.discovery_items)} items."}
+
+        
     
 
 @app.get("/auth/me")
-def who_am_i(claims=Depends(dependencies.decode_token)):
+def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
     """
     return claims
 
+# exception handling
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
-    )
+async def validation_exception_handler(request, exc):
+    return JSONResponse(str(exc), status_code=422)
