@@ -1,6 +1,6 @@
 import os
+import requests # see comment in validate_dataset()
 from typing import Dict, Union
-import requests
 from typing import Union
 from getpass import getuser
 
@@ -9,8 +9,6 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Body
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from stac_pydantic.collection import SpatialExtent, Extent, TimeInterval
-from pydantic import ValidationError
 
 from . import (
     auth,
@@ -201,7 +199,7 @@ async def get_token(
 @app.post(
     "/dataset/validate",
     tags=["Dataset"],
-    #dependencies=[Depends(auth.get_username)],
+    dependencies=[Depends(auth.get_username)],
 )
 def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
@@ -241,10 +239,10 @@ def publish_dataset(dataset: schemas.Dataset):
                 "bbox": [list(dataset.spatial_extent.dict().values())]
             }, 
             "temporal": {
-                "interval": [list(dataset.temporal_extent.dict().values())] # TODO collection not supporting datetimes
+                "interval": [list(dataset.temporal_extent.dict().values())]
             }
         },
-        dashboard_is_periodic=dataset.dashboard_is_periodic, # not being picked up by collection Pydantic?
+        dashboard_is_periodic=dataset.dashboard_is_periodic,
         dashboard_time_density=dataset.dashboard_time_density,
         item_assets={
             "cog_default":{

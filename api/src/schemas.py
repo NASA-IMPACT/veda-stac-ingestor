@@ -193,11 +193,10 @@ class WorkflowInputBase(BaseModel):
 
 class S3Input(WorkflowInputBase):
     discovery: Literal['s3']
-    # for s3
     prefix: str
     bucket: str
     filename_regex : str
-    datetime_range: Optional[str] # literal (month, day, year)
+    datetime_range: Optional[str]
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
@@ -205,7 +204,7 @@ class S3Input(WorkflowInputBase):
     @root_validator
     def is_accessible(cls, values):
         bucket, prefix = values.get("bucket"), values.get("prefix")
-        #validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
+        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
         return values
 
 class CmrInput(WorkflowInputBase):
@@ -215,7 +214,7 @@ class CmrInput(WorkflowInputBase):
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
 
-# not a great name, but allows the construction of models with a list of discriminated unions
+# allows the construction of models with a list of discriminated unions
 ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator='discovery')]
 
 class Dataset(BaseModel):
@@ -227,7 +226,7 @@ class Dataset(BaseModel):
     dashboard_time_density: str
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
-    sample_files: List[str] # TODO how to do with CMR?
+    sample_files: List[str] # unknown how this will work with CMR
     discovery_items : List[ItemUnion]
 
     class Config:
@@ -274,5 +273,5 @@ class Dataset(BaseModel):
             if not any([fname.startswith(match['prefix']) for match in valid_matches]):
                 raise ValidationError(f'Invalid sample file - {fname} doesn\'t match prefix')
             if not any([re.search(match['regex'], fname.split('/')[-1]) for match in valid_matches]):
-                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match regex')
+                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match provided regex')
         return v
