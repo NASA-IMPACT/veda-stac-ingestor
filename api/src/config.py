@@ -5,7 +5,6 @@ from pydantic_ssm_settings import AwsSsmSourceConfig
 
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
-AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
 
 
 class Settings(BaseSettings):
@@ -31,12 +30,3 @@ class Settings(BaseSettings):
     @classmethod
     def from_ssm(cls, stack: str):
         return cls(_secrets_dir=f"/{stack}")
-
-    data_pipeline_arn: AwsStepArn = Field(
-        description="ARN of AWS step function used to trigger data ingestion"
-    )
-
-    userpool_id: str = Field(description="The Cognito Userpool used for authentication")
-
-    client_id: str = Field(description="The Cognito APP client ID")
-    client_secret: str = Field(description="The Cognito APP client secret")

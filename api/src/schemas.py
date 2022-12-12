@@ -25,7 +25,13 @@ from pydantic import (
 
 from stac_pydantic import Item, Collection, shared
 
+
 from . import validators
+from .schema_helpers import (
+    DatetimeExtent,
+    BboxExtent,
+    TemporalExtent
+)
 
 if TYPE_CHECKING:
     from . import services
@@ -58,11 +64,12 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: bool = Field(alias="dashboard:is_periodic")
-    time_density: Literal["day", "month", "year", "null"] = Field(
-        alias="dashboard:time_density", default="null"
+    dashboard_is_periodic: bool
+    dashboard_time_density: Literal["day", "month", "year", "null"] = Field(
+        default="null"
     )
     item_assets: Dict
+    extent: DatetimeExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
@@ -173,30 +180,24 @@ class UpdateIngestionRequest(BaseModel):
     message: str = None
 
 
-class Discovery(str, enum.Enum):
-    s3 = "s3"
-    cmr = "cmr"
-
-
 class WorkflowInputBase(BaseModel):
-    collection: str
-    discovery: Discovery
+    collection: str = ''
     upload: Optional[bool] = False
     cogify: Optional[bool] = False
+    dry_run: bool = False
 
     @validator("collection")
     def exists(cls, collection):
         validators.collection_exists(collection_id=collection)
         return collection
 
-
 class S3Input(WorkflowInputBase):
-    # s3 discovery
-    discovery: Literal[Discovery.s3]
-
+    discovery: Literal['s3']
+    # for s3
     prefix: str
     bucket: str
-    filename_regex: Optional[str]
+    filename_regex : str
+    datetime_range: Optional[str] # literal (month, day, year)
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
@@ -204,70 +205,18 @@ class S3Input(WorkflowInputBase):
     @root_validator
     def is_accessible(cls, values):
         bucket, prefix = values.get("bucket"), values.get("prefix")
-        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
+        #validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
         return values
 
-
 class CmrInput(WorkflowInputBase):
-    # cmr discovery
-    discovery: Literal[Discovery.cmr]
-
+    discovery: Literal['cmr']
     version: Optional[str]
     include: Optional[str]
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
-# TODO we want these validations but I also want to use the SpatialExtent and TemporalExtent models provided by stac_pydantic
-class Extent(BaseModel):
-    xmin: float
-    ymin: float
-    xmax: float
-    ymax: float
-    startdate: datetime
-    enddate: datetime
-    
-    @root_validator
-    def check_extent(cls, v):
-        # mins must be below maxes
-        if v['xmin'] >= v['xmax'] or v['ymin'] >= v['ymax']:
-            raise ValueError('Invalid extent - xmin must be less than xmax, ymin less than ymax')
-        # ys must be within -90 and 90, x between -180 and 180
-        if v['xmin'] < -180 or v['xmax'] > 180 or v['ymin'] < -90 or v['ymax'] > 90:
-            raise ValueError('Invalid extent - coordinates must be within -180, 180 and -90, 90')
-        return v
-
-    @root_validator
-    def check_dates(cls, v):
-        if v['startdate'] >= v['enddate']:
-            raise ValueError('Invalid extent - startdate must be before enddate')
-        return v
-
-# Not to be confused with the stac_pydantic Item model - these define the inputs for the `insert-item` workflows
-class Item(BaseModel):
-    collection: Optional[str]
-    cogify: bool = False
-    upload: bool = False
-    dry_run: bool = False
-
-class s3Item(Item):
-    discovery: Literal['s3']
-    # for s3
-    prefix: str
-    bucket: str
-    filename_regex : str
-    datetime_range: Optional[str] # literal (month, day, year)
-    start_datetime: datetime
-    end_datetime: datetime
-
-class cmrItem(Item):
-    discovery: Literal['cmr']
-    # for cmr
-    version: str
-    temporal : List[str]
-    bounding_box: str
-    include: str
 
 # not a great name, but allows the construction of models with a list of discriminated unions
-ItemUnion = Annotated[Union[s3Item, cmrItem], Field(discriminator='discovery')]
+ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator='discovery')]
 
 class Dataset(BaseModel):
     collection: str
@@ -276,20 +225,13 @@ class Dataset(BaseModel):
     license: str
     dashboard_is_periodic: bool
     dashboard_time_density: str
-    extent: Extent
+    spatial_extent: BboxExtent
+    temporal_extent: TemporalExtent
     sample_files: List[str] # TODO how to do with CMR?
     discovery_items : List[ItemUnion]
 
     class Config:
         extra = Extra.allow
-
-    @validator('license')
-    def check_license(cls, v):
-        # value must be one of: CC0 MIT
-        # TODO fill in rest of list
-        if v not in ['CC0', 'MIT']:
-            raise ValueError('Invalid license')
-        return v
     
     # time density must be one of month, day, year if periodic is true, otherwise it must be null
     @root_validator
@@ -328,9 +270,9 @@ class Dataset(BaseModel):
                         'regex': item.filename_regex
                     }
                 )
-        for file in v['sample_files']:
-            if not any([file.startswith(match['prefix']) for match in valid_matches]):
-                raise ValidationError(f'Invalid sample file - {file} doesn\'t match prefix')
-            if not any([re.match(match['regex'], file.split('/')[-1]) for match in valid_matches]):
-                raise ValidationError(f'Invalid sample file - {file} doesn\'t match regex')
+        for fname in v['sample_files']:
+            if not any([fname.startswith(match['prefix']) for match in valid_matches]):
+                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match prefix')
+            if not any([re.search(match['regex'], fname.split('/')[-1]) for match in valid_matches]):
+                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match regex')
         return v
