@@ -18,20 +18,15 @@ from pydantic import (
     validator,
     root_validator,
     Field,
-    root_validator,
     Extra,
-    ValidationError
+    ValidationError,
 )
 
 from stac_pydantic import Item, Collection, shared
 
 
 from . import validators
-from .schema_helpers import (
-    DatetimeExtent,
-    BboxExtent,
-    TemporalExtent
-)
+from .schema_helpers import DatetimeExtent, BboxExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -181,7 +176,7 @@ class UpdateIngestionRequest(BaseModel):
 
 
 class WorkflowInputBase(BaseModel):
-    collection: str = ''
+    collection: str = ""
     upload: Optional[bool] = False
     cogify: Optional[bool] = False
     dry_run: bool = False
@@ -191,11 +186,12 @@ class WorkflowInputBase(BaseModel):
         validators.collection_exists(collection_id=collection)
         return collection
 
+
 class S3Input(WorkflowInputBase):
-    discovery: Literal['s3']
+    discovery: Literal["s3"]
     prefix: str
     bucket: str
-    filename_regex : str
+    filename_regex: str
     datetime_range: Optional[str]
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
@@ -207,15 +203,18 @@ class S3Input(WorkflowInputBase):
         validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
         return values
 
+
 class CmrInput(WorkflowInputBase):
-    discovery: Literal['cmr']
+    discovery: Literal["cmr"]
     version: Optional[str]
     include: Optional[str]
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
 
+
 # allows the construction of models with a list of discriminated unions
-ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator='discovery')]
+ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator="discovery")]
+
 
 class Dataset(BaseModel):
     collection: str
@@ -226,26 +225,29 @@ class Dataset(BaseModel):
     dashboard_time_density: str
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
-    sample_files: List[str] # unknown how this will work with CMR
-    discovery_items : List[ItemUnion]
+    sample_files: List[str]  # unknown how this will work with CMR
+    discovery_items: List[ItemUnion]
 
     class Config:
         extra = Extra.allow
-    
-    # time density must be one of month, day, year if periodic is true, otherwise it must be null
+
     @root_validator
     def check_time_density(cls, v):
-        if v['dashboard_is_periodic'] and v['dashboard_time_density'] not in ['month', 'day', 'year']:
-            raise ValueError('Invalid time density')
-        if not v['dashboard_is_periodic'] and v['dashboard_time_density'] != 'null':
-            raise ValueError('Invalid time density')
+        if v["dashboard_is_periodic"] and v["dashboard_time_density"] not in [
+            "month",
+            "day",
+            "year",
+        ]:
+            raise ValueError("Invalid time density")
+        if not v["dashboard_is_periodic"] and v["dashboard_time_density"] != "null":
+            raise ValueError("Invalid time density")
         return v
-    
+
     # collection id must be all lowercase, with optional - delimiter
-    @validator('collection')
+    @validator("collection")
     def check_id(cls, v):
-        if not re.match(r'[a-z]+(?:-[a-z]+)*', v):
-            raise ValueError('Invalid id')
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", v):
+            raise ValueError("Invalid id")
         return v
 
     @validator("collection")
@@ -256,22 +258,28 @@ class Dataset(BaseModel):
     # all sample files must begin with prefix and their last element must match regex
     @root_validator
     def check_sample_files(cls, v):
-        if 's3' not in [item.discovery for item in v['discovery_items']]:
-            print('No s3 discovery items to validate sample files against')
+        if "s3" not in [item.discovery for item in v["discovery_items"]]:
+            print("No s3 discovery items to validate sample files against")
             return v
         # TODO cmr handling/validation
         valid_matches = []
-        for item in v['discovery_items']:
-            if item.discovery == 's3':
+        for item in v["discovery_items"]:
+            if item.discovery == "s3":
                 valid_matches.append(
-                    {
-                        'prefix': item.prefix,
-                        'regex': item.filename_regex
-                    }
+                    {"prefix": item.prefix, "regex": item.filename_regex}
                 )
-        for fname in v['sample_files']:
-            if not any([fname.startswith(match['prefix']) for match in valid_matches]):
-                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match prefix')
-            if not any([re.search(match['regex'], fname.split('/')[-1]) for match in valid_matches]):
-                raise ValidationError(f'Invalid sample file - {fname} doesn\'t match provided regex')
+        for fname in v["sample_files"]:
+            if not any([fname.startswith(match["prefix"]) for match in valid_matches]):
+                raise ValidationError(
+                    f"Invalid sample file - {fname} doesn't match prefix"
+                )
+            if not any(
+                [
+                    re.search(match["regex"], fname.split("/")[-1])
+                    for match in valid_matches
+                ]
+            ):
+                raise ValidationError(
+                    f"Invalid sample file - {fname} doesn't match provided regex"
+                )
         return v

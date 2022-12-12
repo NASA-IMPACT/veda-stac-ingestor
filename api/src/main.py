@@ -1,12 +1,10 @@
 import os
-import requests # see comment in validate_dataset()
+import requests  # noqa: F401  see comment in validate_dataset()
 from typing import Dict, Union
-from typing import Union
 from getpass import getuser
 
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends, FastAPI, HTTPException, Request, Body
-from fastapi.encoders import jsonable_encoder
+from fastapi import Depends, FastAPI, HTTPException, Body
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -19,6 +17,7 @@ from . import (
     services,
     collection as collection_loader,
 )
+
 
 settings = (
     config.Settings()
@@ -196,6 +195,7 @@ async def get_token(
         settings.client_secret,
     )
 
+
 @app.post(
     "/dataset/validate",
     tags=["Dataset"],
@@ -206,7 +206,7 @@ def validate_dataset(dataset: schemas.Dataset):
     # TODO this is commented out until the raster API fixes this endpoint
     # https://github.com/NASA-IMPACT/delta-backend/issues/133
 
-    #for sample in dataset.sample_files:
+    # for sample in dataset.sample_files:
     #    url = f"{settings.raster_url}/cog/validate?url={sample}"
     #    try:
     #        response = requests.get(url)
@@ -220,12 +220,13 @@ def validate_dataset(dataset: schemas.Dataset):
     #            status_code=422,
     #            detail=(f"Sample file {sample} is invalid: {e}"),
     #        )
-    return {f"Dataset metadata is valid and ready to be published - {dataset.collection}"}
+    return {
+        f"Dataset metadata is valid and ready to be published - {dataset.collection}"
+    }
+
 
 @app.post(
-    "/dataset/publish",
-    tags=["Dataset"],
-    dependencies=[Depends(auth.get_username)]
+    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
 def publish_dataset(dataset: schemas.Dataset):
     # Construct and load collection
@@ -235,39 +236,33 @@ def publish_dataset(dataset: schemas.Dataset):
         description=dataset.description,
         license=dataset.license,
         extent={
-            "spatial": {
-                "bbox": [list(dataset.spatial_extent.dict().values())]
-            }, 
-            "temporal": {
-                "interval": [list(dataset.temporal_extent.dict().values())]
-            }
+            "spatial": {"bbox": [list(dataset.spatial_extent.dict().values())]},
+            "temporal": {"interval": [list(dataset.temporal_extent.dict().values())]},
         },
         dashboard_is_periodic=dataset.dashboard_is_periodic,
         dashboard_time_density=dataset.dashboard_time_density,
         item_assets={
-            "cog_default":{
+            "cog_default": {
                 "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-                "roles": [
-                    "data",
-                    "layer"
-                ],
+                "roles": ["data", "layer"],
                 "title": "Default COG Layer",
-                "description": "Cloud optimized default layer to display on map"
+                "description": "Cloud optimized default layer to display on map",
             }
         },
         stac_version="1.0.0",
         links=[],
-        type="Collection"
+        type="Collection",
     )
     publish_collection(collection)
-    #Construct and load items
+    # Construct and load items
     for discovery in dataset.discovery_items:
         discovery.collection = dataset.collection
         start_workflow_execution(discovery)
-    return {f"Successfully published dataset: {dataset.collection}\n Initiated workflows for {len(dataset.discovery_items)} items."}
+    return {
+        f"Successfully published dataset: {dataset.collection}\n\
+            Initiated workflows for {len(dataset.discovery_items)} items."
+    }
 
-        
-    
 
 @app.get("/auth/me")
 def who_am_i(claims=Depends(auth.decode_token)):
@@ -275,6 +270,7 @@ def who_am_i(claims=Depends(auth.decode_token)):
     Return claims for the provided JWT
     """
     return claims
+
 
 # exception handling
 @app.exception_handler(RequestValidationError)
