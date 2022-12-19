@@ -12,3 +12,4 @@ requests>=2.27.1
 stac-pydantic @ git+https://github.com/alukach/stac-pydantic.git@patch-1
 ddbcereal==2.1.1
 python-multipart==0.0.5
+uvicorn==0.20.0
