@@ -16,6 +16,7 @@ from . import (
     schemas,
     services,
     collection as collection_loader,
+    validators
 )
 
 
@@ -253,7 +254,12 @@ def publish_dataset(dataset: schemas.Dataset):
         links=[],
         type="Collection",
     )
-    publish_collection(collection)
+    if validators.collection_exists(collection_id=collection):
+        # TODO collection update workflow? overwrite or calculate delta + update fields?
+        pass # collection already exists, but new items might be added or the collection might be updated
+    else:
+        # create new collection
+        publish_collection(collection)
     # Construct and load items
     for discovery in dataset.discovery_items:
         discovery.collection = dataset.collection
