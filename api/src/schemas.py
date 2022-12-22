@@ -250,11 +250,6 @@ class Dataset(BaseModel):
             raise ValueError("Invalid id")
         return v
 
-    @validator("collection")
-    def exists(cls, v):
-        validators.collection_exists(collection_id=v)
-        return v
-
     # all sample files must begin with prefix and their last element must match regex
     @root_validator
     def check_sample_files(cls, v):
