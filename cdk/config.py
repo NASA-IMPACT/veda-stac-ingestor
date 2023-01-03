@@ -71,6 +71,8 @@ class Deployment(BaseSettings):
         description="ARN of AWS step function used to trigger data ingestion"
     )
 
+    airflow_env: str = Field(description="Airflow environment to run the dag on")
+
     class Config:
         env_prefix = ""
         case_sentive = False

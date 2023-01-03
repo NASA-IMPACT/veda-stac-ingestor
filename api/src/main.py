@@ -139,6 +139,9 @@ def delete_collection(collection_id: str):
 def get_data_pipeline_arn() -> str:
     return settings.data_pipeline_arn
 
+def get_airflow_env() -> str:
+    return settings.airflow_env
+
 
 @app.post(
     "/workflow-executions",
@@ -150,12 +153,14 @@ async def start_workflow_execution(
     input: Union[schemas.CmrInput, schemas.S3Input] = Body(
         ..., discriminator="discovery"
     ),
-    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
+    airflow_env: str = Depends(get_airflow_env),
 ) -> schemas.BaseResponse:
     """
     Triggers the ingestion workflow
     """
-    return helpers.trigger_discover(input, data_pipeline_arn)
+    ## return helpers.trigger_discover(input, data_pipeline_arn)
+    return helpers.trigger_discovery(airflow_env, input)
+
 
 
 @app.get(

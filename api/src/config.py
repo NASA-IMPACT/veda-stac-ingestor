@@ -38,3 +38,4 @@ class Settings(BaseSettings):
 
     client_id: str = Field(description="The Cognito APP client ID")
     client_secret: str = Field(description="The Cognito APP client secret")
+    airflow_env: str = Field(description = "Airflow environment on which to run the dag")

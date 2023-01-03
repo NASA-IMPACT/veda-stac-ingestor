@@ -38,19 +38,27 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
     )
 
 ## based on example at https://amarouane-ecs-cluster.snwg-impact.net/notebooks/work/netcdf_to_cog.ipynb
-def execute_dag(input: Dict, dag_id: str) -> requests.Response:
+def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     assert dag_id in ('veda_discover', 'veda_ingest')
 
-    boto3_session = boto3.Session(profile_name='devseed') ## need: aws_access_key_id, aws_secret_access_key, aws_session_token
-    client = boto3_session.client('mwaa')
-    token = client.create_cli_token(Name='veda-uah-sit-mwaa')
+    client = boto3.client('mwaa')
+    token = client.create_cli_token(Name=env_name) ## This needs to be abstract?
     url = f"https://{token['WebServerHostname']}/aws_maa/cli"
     headers = {'Authorization': f"Bearer {token['CliToken']}", 'Content-Type': 'text/plain'}
     ## Which of these dag_ids to call: veda_discover and veda_ingest ?
     body = f"dags trigger {dag_id} -c '{json.dumps(input)}'" ## input comes from veda-data-pipelines/data/step_functions_inputs/*.json ?
 
-    return requests.post(url, data=body, headers=headers)
+    res = requests.post(url, data=body, headers=headers)
+    unique_key = str(uuid4())
+    return BaseResponse(
+        **{
+            "id": unique_key,
+            "status": Status.started,
+        }
+    )
 
+def trigger_discovery(env_name: str, input: Dict) -> requests.Response:
+    return execute_dag(env_name, input, 'veda_discover')
 
 
 def _build_execution_arn(id: str, data_pipeline_arn: str) -> str:
