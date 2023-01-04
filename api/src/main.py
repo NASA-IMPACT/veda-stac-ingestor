@@ -1,24 +1,23 @@
 import os
-import requests  # noqa: F401  see comment in validate_dataset()
-from typing import Dict, Union
 from getpass import getuser
+from typing import Dict, Union
 
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends, FastAPI, HTTPException, Body
+import requests  # noqa: F401  see comment in validate_dataset()
+from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
 
 from . import (
     auth,
+    collection as collection_loader,
     config,
     dependencies,
     helpers,
     schemas,
     services,
-    collection as collection_loader,
-    validators
+    validators,
 )
-
 
 settings = (
     config.Settings()
@@ -154,12 +153,11 @@ async def start_workflow_execution(
     input: Union[schemas.CmrInput, schemas.S3Input] = Body(
         ..., discriminator="discovery"
     ),
-    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
 ) -> schemas.BaseResponse:
     """
     Triggers the ingestion workflow
     """
-    return helpers.trigger_discover(input, data_pipeline_arn)
+    return helpers.trigger_discover(input, get_data_pipeline_arn())
 
 
 @app.get(
@@ -170,12 +168,11 @@ async def start_workflow_execution(
 )
 async def get_workflow_execution_status(
     workflow_execution_id: str,
-    data_pipeline_arn: str = Depends(get_data_pipeline_arn),
 ) -> Union[schemas.ExecutionResponse, schemas.BaseResponse]:
     """
     Returns the status of the workflow execution
     """
-    return helpers.get_status(workflow_execution_id, data_pipeline_arn)
+    return helpers.get_status(workflow_execution_id, get_data_pipeline_arn())
 
 
 @app.post(
@@ -229,20 +226,36 @@ def validate_dataset(dataset: schemas.Dataset):
 @app.post(
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
-def publish_dataset(dataset: schemas.Dataset):
+async def publish_dataset(dataset: schemas.Dataset):
     # Construct and load collection
-    collection = schemas.DashboardCollection(
-        id=dataset.collection,
-        title=dataset.title,
-        description=dataset.description,
-        license=dataset.license,
-        extent={
-            "spatial": {"bbox": [list(dataset.spatial_extent.dict().values())]},
-            "temporal": {"interval": [list(dataset.temporal_extent.dict().values())]},
-        },
-        dashboard_is_periodic=dataset.dashboard_is_periodic,
-        dashboard_time_density=dataset.dashboard_time_density,
-        item_assets={
+    collection_data = {
+        "id": dataset.collection,
+        "title": dataset.title,
+        "description": dataset.description,
+        "license": dataset.license,
+        "extent": schemas.DatetimeExtent.parse_obj(
+            {
+                "spatial": {
+                    "bbox": [
+                        list(dataset.spatial_extent.dict(exclude_unset=True).values())
+                    ]
+                },
+                "temporal": {
+                    "interval": [
+                        # most of our data uses the Z suffix for UTC - isoformat() doesn't
+                        [
+                            x.isoformat().replace("+00:00", "Z")
+                            for x in list(
+                                dataset.temporal_extent.dict(
+                                    exclude_unset=True
+                                ).values()
+                            )
+                        ]
+                    ]
+                },
+            }
+        ),
+        "item_assets": {
             "cog_default": {
                 "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                 "roles": ["data", "layer"],
@@ -250,20 +263,24 @@ def publish_dataset(dataset: schemas.Dataset):
                 "description": "Cloud optimized default layer to display on map",
             }
         },
-        stac_version="1.0.0",
-        links=[],
-        type="Collection",
-    )
-    if validators.collection_exists(collection_id=collection):
-        # TODO collection update workflow? overwrite or calculate delta + update fields?
-        pass # collection already exists, but new items might be added or the collection might be updated
+        "links": [],
+        "type": "Collection",
+        "dashboard:time_density": dataset.dashboard_time_density,
+        "dashboard:is_periodic": dataset.dashboard_is_periodic,
+    }
+    collection = schemas.DashboardCollection.parse_obj(collection_data)
+
+    if validators.collection_exists(collection_id=collection.id):
+        # TODO collection update workflow? overwrite, or calculate delta + update fields?
+        # collection already exists, but the collection might be updated
+        pass
     else:
         # create new collection
         publish_collection(collection)
     # Construct and load items
     for discovery in dataset.discovery_items:
         discovery.collection = dataset.collection
-        start_workflow_execution(discovery)
+        await start_workflow_execution(discovery)
     return {
         f"Successfully published dataset: {dataset.collection}\n\
             Initiated workflows for {len(dataset.discovery_items)} items."
