@@ -1,8 +1,7 @@
 from getpass import getuser
 
 import aws_cdk
-from pydantic import BaseSettings, Field, HttpUrl, constr, AnyHttpUrl
-
+from pydantic import AnyHttpUrl, BaseSettings, Field, HttpUrl, constr
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")

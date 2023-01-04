@@ -1,9 +1,9 @@
 import enum
-from typing import List, Union
 from datetime import datetime
+from typing import List, Union
 
-from stac_pydantic.collection import TimeInterval, Extent
 from pydantic import BaseModel, root_validator
+from stac_pydantic.collection import Extent, TimeInterval
 
 # Smaller utility models to support the larger models in schemas.py
 

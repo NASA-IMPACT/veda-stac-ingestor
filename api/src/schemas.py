@@ -5,28 +5,26 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional, Literal, Union
-from typing_extensions import Annotated
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
 from pydantic import (
     BaseModel,
+    Extra,
+    Field,
     PositiveInt,
+    ValidationError,
     dataclasses,
     error_wrappers,
-    validator,
     root_validator,
-    Field,
-    Extra,
-    ValidationError,
+    validator,
 )
-
-from stac_pydantic import Item, Collection, shared
-
+from stac_pydantic import Collection, Item, shared
+from typing_extensions import Annotated
 
 from . import validators
-from .schema_helpers import DatetimeExtent, BboxExtent, TemporalExtent
+from .schema_helpers import BboxExtent, DatetimeExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -59,17 +57,17 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    dashboard_is_periodic: bool
-    dashboard_time_density: Literal["day", "month", "year", "null"] = Field(
-        default="null"
+    is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
+    time_density: Literal["day", "month", "year", "null"] = Field(
+        default="null", alias="dashboard:time_density"
     )
     item_assets: Dict
     extent: DatetimeExtent
 
     @validator("item_assets")
-    def cog_default_exists(cls, item_assets):
-        validators.cog_default_exists(item_assets=item_assets)
-        return item_assets
+    def cog_default_exists(cls, v):
+        validators.cog_default_exists(item_assets=v)
+        return v
 
 
 class Status(str, enum.Enum):

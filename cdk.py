@@ -3,7 +3,6 @@ from aws_cdk import App
 
 from cdk import config, stack
 
-
 deployment = config.Deployment(_env_file=".env")
 
 app = App()

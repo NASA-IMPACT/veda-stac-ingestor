@@ -3,16 +3,14 @@ import hashlib
 import hmac
 import logging
 from typing import Dict
-import requests
 
 import boto3
-
-from authlib.jose import JsonWebToken, JsonWebKey, KeySet, JWTClaims, errors
-from cachetools import cached, TTLCache
+import requests
+from authlib.jose import JsonWebKey, JsonWebToken, JWTClaims, KeySet, errors
+from cachetools import TTLCache, cached
 from fastapi import Depends, HTTPException, security
 
 from . import config
-
 
 logger = logging.getLogger(__name__)
 
