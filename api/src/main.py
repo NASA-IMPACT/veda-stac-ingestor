@@ -159,7 +159,7 @@ async def start_workflow_execution(
     """
     Triggers the ingestion workflow
     """
-    ## return helpers.trigger_discover(input, data_pipeline_arn)
+    # return helpers.trigger_discover(input, data_pipeline_arn)
     return helpers.trigger_discovery(airflow_env, input)
 
 

@@ -46,9 +46,9 @@ def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     url = f"https://{token['WebServerHostname']}/aws_maa/cli"
     headers = {
         "Authorization": f"Bearer {token['CliToken']}",
-        "Content-Type": "text/plain"
+        "Content-Type": "text/plain",
     }
-    body = f"dags trigger {dag_id} -c '{json.dumps(input)}'" # input comes from veda-data-pipelines/data/step_functions_inputs/*.json ?
+    body = f"dags trigger {dag_id} -c '{json.dumps(input)}'"
 
     _res = requests.post(url, data=body, headers=headers)
     unique_key = str(uuid4())
