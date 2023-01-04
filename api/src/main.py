@@ -139,6 +139,7 @@ def delete_collection(collection_id: str):
 def get_data_pipeline_arn() -> str:
     return settings.data_pipeline_arn
 
+
 def get_airflow_env() -> str:
     return settings.airflow_env
 

@@ -37,16 +37,14 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
         }
     )
 
-## based on example at https://amarouane-ecs-cluster.snwg-impact.net/notebooks/work/netcdf_to_cog.ipynb
 def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     assert dag_id in ('veda_discover', 'veda_ingest')
 
     client = boto3.client('mwaa')
-    token = client.create_cli_token(Name=env_name) ## This needs to be abstract?
+    token = client.create_cli_token(Name=env_name)
     url = f"https://{token['WebServerHostname']}/aws_maa/cli"
     headers = {'Authorization': f"Bearer {token['CliToken']}", 'Content-Type': 'text/plain'}
-    ## Which of these dag_ids to call: veda_discover and veda_ingest ?
-    body = f"dags trigger {dag_id} -c '{json.dumps(input)}'" ## input comes from veda-data-pipelines/data/step_functions_inputs/*.json ?
+    body = f"dags trigger {dag_id} -c '{json.dumps(input)}'" # input comes from veda-data-pipelines/data/step_functions_inputs/*.json ?
 
     res = requests.post(url, data=body, headers=headers)
     unique_key = str(uuid4())
