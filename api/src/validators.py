@@ -1,8 +1,8 @@
-import boto3
 import functools
-import requests
-
 from typing import Dict
+
+import boto3
+import requests
 
 
 @functools.lru_cache()
