@@ -163,7 +163,6 @@ async def start_workflow_execution(
     return helpers.trigger_discovery(airflow_env, input)
 
 
-
 @app.get(
     "/workflow-executions/{workflow_execution_id}",
     response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],

@@ -37,16 +37,20 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
         }
     )
 
-def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
-    assert dag_id in ('veda_discover', 'veda_ingest')
 
-    client = boto3.client('mwaa')
+def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
+    assert dag_id in ("veda_discover", "veda_ingest")
+
+    client = boto3.client("mwaa")
     token = client.create_cli_token(Name=env_name)
     url = f"https://{token['WebServerHostname']}/aws_maa/cli"
-    headers = {'Authorization': f"Bearer {token['CliToken']}", 'Content-Type': 'text/plain'}
+    headers = {
+        "Authorization": f"Bearer {token['CliToken']}",
+        "Content-Type": "text/plain"
+    }
     body = f"dags trigger {dag_id} -c '{json.dumps(input)}'" # input comes from veda-data-pipelines/data/step_functions_inputs/*.json ?
 
-    res = requests.post(url, data=body, headers=headers)
+    _res = requests.post(url, data=body, headers=headers)
     unique_key = str(uuid4())
     return BaseResponse(
         **{
@@ -55,8 +59,9 @@ def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
         }
     )
 
+
 def trigger_discovery(env_name: str, input: Dict) -> requests.Response:
-    return execute_dag(env_name, input, 'veda_discover')
+    return execute_dag(env_name, input, "veda_discover")
 
 
 def _build_execution_arn(id: str, data_pipeline_arn: str) -> str:
