@@ -16,7 +16,6 @@ from . import (
     helpers,
     schemas,
     services,
-    validators,
 )
 
 settings = (
@@ -269,15 +268,8 @@ async def publish_dataset(dataset: schemas.Dataset):
         "dashboard:is_periodic": dataset.dashboard_is_periodic,
     }
     collection = schemas.DashboardCollection.parse_obj(collection_data)
+    publish_collection(collection)
 
-    if validators.collection_exists(collection_id=collection.id):
-        # TODO collection update workflow? overwrite, or calculate delta + update fields?
-        # collection already exists, but the collection might be updated
-        pass
-    else:
-        # create new collection
-        publish_collection(collection)
-    # Construct and load items
     for discovery in dataset.discovery_items:
         discovery.collection = dataset.collection
         await start_workflow_execution(discovery)
