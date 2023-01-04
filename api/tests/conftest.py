@@ -26,6 +26,7 @@ def test_environ():
     os.environ["JWKS_URL"] = "https://test-jwks.url"
     os.environ["STAC_URL"] = "https://test-stac.url"
     os.environ["USERPOOL_ID"] = "fake_id"
+    os.environ["AIRFLOW_ENV"] = "fake_mwaa_env"
 
 
 @pytest.fixture
