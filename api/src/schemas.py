@@ -102,6 +102,18 @@ class ExecutionResponse(BaseResponse):
     discovered_files: List[str]
 
 
+class AuthResponse(BaseModel):
+    AccessToken: str = Field(..., description="Token used to authenticate the user.")
+    ExpiresIn: int = Field(..., description="Number of seconds before the AccessToken expires.")
+    TokenType: str = Field(..., description="Type of token being returned (e.g. 'Bearer').")
+    RefreshToken: str = Field(..., description="Token used to refresh the AccessToken when it expires.")
+    IdToken: str = Field(..., description="Token containing information about the authenticated user.")
+
+
+class WorkflowExecutionResponse(BaseModel):
+    id: str = Field(..., description="ID of the workflow execution in discover step function.")
+    status: Status = Field(..., description="Status of the workflow execution in discover step function.")
+
 class Ingestion(BaseModel):
     id: str
     status: Status
