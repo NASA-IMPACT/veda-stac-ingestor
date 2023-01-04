@@ -200,6 +200,15 @@ class WorkflowInputBase(BaseModel):
 
     @validator("collection")
     def exists(cls, collection):
+        """
+        Validate that the collection exists.
+        
+        Parameters:
+        - collection (str): Name of the collection to be validated.
+        
+        Returns:
+        - str: Name of the collection.
+        """
         validators.collection_exists(collection_id=collection)
         return collection
 
