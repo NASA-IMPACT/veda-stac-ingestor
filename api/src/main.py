@@ -27,7 +27,43 @@ settings = (
         ),
     )
 )
-app = FastAPI(root_path=settings.root_path)
+
+
+description = """
+# Overview
+The VEDA STAC Ingestor is a service that allows users and other services to add new records to the STAC database.
+It performs validation on the records, called STAC items, to ensure that they meet the STAC specification, 
+all assets are accessible, and their collection exists. The service also performs insertions to the STAC database. 
+
+# Usage
+
+## Authentication
+Before using the API, user must ask a VEDA team member to create credentials (username and password) for VEDA auth.
+The user name and password is used to get the access token from Auth API call in order to authorize the execution of API.
+
+
+## Workflow Executions
+The workflow execution API is used to start a new workflow execution. The workflow execution API accepts discovery from s3 or cmr.
+To run a workflow execution, the user must provide the following information:
+
+**For s3 discovery:**
+We use input from `https://github.com/NASA-IMPACT/veda-data-pipelines/tree/main/data/step_function_inputs`.
+
+"""
+
+
+app = FastAPI(
+    root_path=settings.root_path,
+    title="VEDA STAC Ingestor API Documentation",
+    description=description,
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+    contact={
+        "url":"https://github.com/NASA-IMPACT/veda-stac-ingestor"
+        }
+)
 
 publisher = collection_loader.Publisher()
 
