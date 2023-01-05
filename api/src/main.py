@@ -182,7 +182,7 @@ def get_data_pipeline_arn() -> str:
 
 @app.post(
     "/workflow-executions",
-    response_model=schemas.BaseResponse,
+    response_model=schemas.WorkflowExecutionResponse,
     tags=["Workflow-Executions"],
     status_code=201,
 )
@@ -214,6 +214,7 @@ async def get_workflow_execution_status(
 @app.post(
     "/token",
     tags=["Auth"],
+    response_model=schemas.AuthResponse
 )
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
