@@ -50,7 +50,7 @@ def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     }
     body = f"dags trigger {dag_id} -c '{json.dumps(input)}'"
 
-    _res = requests.post(url, data=body, headers=headers)
+    requests.post(url, data=body, headers=headers)
     unique_key = str(uuid4())
     return BaseResponse(
         **{
