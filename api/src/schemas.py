@@ -93,13 +93,13 @@ class Status(str, enum.Enum):
 
 
 class BaseResponse(BaseModel):
-    id: str
-    status: Status
+    id: str = Field(..., description="ID of the workflow execution in discover step function.")
+    status: Status = Field(..., description="Status of the workflow execution in discover step function.")
 
 
 class ExecutionResponse(BaseResponse):
-    message: str
-    discovered_files: List[str]
+    message: str = Field(..., description="Message returned from the step function.")
+    discovered_files: List[str] = Field(..., description="List of discovered files.")
 
 
 class AuthResponse(BaseModel):
