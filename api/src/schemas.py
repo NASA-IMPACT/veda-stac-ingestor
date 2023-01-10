@@ -110,6 +110,23 @@ class AuthResponse(BaseModel):
     IdToken: str = Field(..., description="Token containing information about the authenticated user.")
 
 
+class WhoAmIResponse(BaseModel):
+    sub: str = Field(..., description="A unique identifier for the user")
+    cognito_groups: List[str] = Field(..., description="A list of Cognito groups the user belongs to")
+    iss: str = Field(..., description="The issuer of the token")
+    client_id: str = Field(..., description="The client ID of the authenticated app")
+    origin_jti: str = Field(..., description="A unique identifier for the authentication event")
+    event_id: str = Field(..., description="A unique identifier for the event")
+    token_use: str = Field(..., description="The intended use of the token")
+    scope: str = Field(..., description="The scope of the token")
+    auth_time: int = Field(..., description="The time when the user was authenticated")
+    exp: int = Field(..., description="The time when the token will expire")
+    iat: int = Field(..., description="The time when the token was issued")
+    jti: str = Field(..., description="A unique identifier for the token")
+    username: str = Field(..., description="The username of the user")
+    aud: str = Field(..., description="The audience of the token")
+
+
 class WorkflowExecutionResponse(BaseModel):
     id: str = Field(..., description="ID of the workflow execution in discover step function.")
     status: Status = Field(..., description="Status of the workflow execution in discover step function.")
