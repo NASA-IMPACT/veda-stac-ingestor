@@ -48,13 +48,27 @@ The user name and password is used to get the access token from Auth API call in
 
 ## Ingestions
 
-The ingestion API allows users to create, cancel, update, and retrieve information about ingests.
-To create an ingestion, the user must provide the following information in the request body:
+The ingestion API allows users to create, cancel, update, and retrieve information about STAC item ingests.
 
-<body>
+The `/ingestions/` endpoint includes a GET endpoint to list ingests based on their status.
+The endpoint takes a single query parameter, `status`, which should be selected from a predefined set of allowed values in the form of a dropdown list.
+
+The allowed values for the `status` parameter are:
+
+* "started": Ingests that have started processing
+* "queued": Ingests that are waiting to be processed
+* "failed": Ingests that have failed during processing
+* "succeeded": Ingests that have been successfully processed
+* "cancelled": Ingests that were cancelled before completing
+
+To create an ingestion, the user must provide the following information in the request body to the POST `/ingestions` API:
+The API allows creating a new ingestion, which includes validating and processing a STAC item, and adding it to the STAC database.
+The request body should be in JSON format and should contain the fields that specifies a STAC item. `https://stacspec.org/en/tutorials/intro-to-stac/#STAC-Item`
+
+The `/ingestions/{ingestion_id}` GET endpoint allows retrieving information about a specific ingestion, including its current status and other metadata.
 
 To cancel an ingestion, the user must provide the ingestion id to the DELETE `/ingestions/{ingestion_id}` API. 
-The status of an ingestion can be retrieved using the GET `/ingestions/{ingestion_id}` API.
+
 To update an ingestion, the user must provide the ingestion id and the new information to the PUT `/ingestions/{ingestion_id}` API.
 
 ## Collections
@@ -155,6 +169,9 @@ async def list_ingestions(
     list_request: schemas.ListIngestionRequest = Depends(),
     db: services.Database = Depends(dependencies.get_db),
 ):
+    """
+    Lists the STAC items from ingestion.
+    """
     return db.fetch_many(
         status=list_request.status, next=list_request.next, limit=list_request.limit
     )
@@ -171,6 +188,9 @@ async def create_ingestion(
     username: str = Depends(auth.get_username),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
+    """
+    Ingests a STAC item.
+    """
     return schemas.Ingestion(
         id=item.id,
         created_by=username,
@@ -187,6 +207,9 @@ async def create_ingestion(
 def get_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
 ) -> schemas.Ingestion:
+    """
+    Gets the status of an ingestion.
+    """
     return ingestion
 
 
@@ -200,6 +223,9 @@ def update_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),
 ):
+    """
+    Updates the STAC item with the provided item.
+    """
     updated_item = ingestion.copy(update=update.dict(exclude_unset=True))
     return updated_item.save(db)
 
@@ -213,6 +239,8 @@ def cancel_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
+    """
+    Cancels an ingestion in queued state."""
     if ingestion.status != schemas.Status.queued:
         raise HTTPException(
             status_code=400,
@@ -369,7 +397,11 @@ async def publish_dataset(
     return return_dict
 
 
-@app.get("/auth/me")
+@app.get(
+    "/auth/me",
+    tags=["Auth"],
+    response_model=schemas.WhoAmIResponse
+)
 def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
