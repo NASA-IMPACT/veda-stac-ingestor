@@ -132,14 +132,14 @@ class WorkflowExecutionResponse(BaseModel):
     status: Status = Field(..., description="Status of the workflow execution in discover step function.")
 
 class Ingestion(BaseModel):
-    id: str
-    status: Status
-    message: Optional[str]
-    created_by: str
-    created_at: datetime = None
-    updated_at: datetime = None
+    id: str = Field(..., description="ID of the STAC item")
+    status: Status = Field(..., description="Status of the ingestion")
+    message: Optional[str] = Field(None, description="Message returned from the step function.")
+    created_by: str = Field(..., description="User who created the ingestion")
+    created_at: datetime = Field(..., description="Timestamp of ingestion creation")
+    updated_at: datetime = Field(..., description="Timestamp of ingestion update")
 
-    item: Item
+    item: Item = Field(..., description="STAC item to ingest")
 
     @validator("created_at", pre=True, always=True, allow_reuse=True)
     @validator("updated_at", pre=True, always=True, allow_reuse=True)
@@ -165,11 +165,11 @@ class Ingestion(BaseModel):
 
 
 @dataclasses.dataclass
-class ListIngestionRequest:
-    status: Status = Status.queued
-    limit: PositiveInt = None
-    next: Optional[str] = None
-
+class ListIngestionRequest(BaseModel):
+    status: Status = Field(Status.queued, description="Status of the ingestion")
+    limit: PositiveInt = Field(None, description="Limit number of results")
+    next: Optional[str] = Field(None, description="Next token (json) to load")
+    
     def __post_init_post_parse__(self) -> None:
         # https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1049987786
         if self.next is None:
@@ -191,8 +191,8 @@ class ListIngestionRequest:
 
 
 class ListIngestionResponse(BaseModel):
-    items: List[Ingestion]
-    next: Optional[str]
+    items: List[Ingestion] = Field(..., description="List of STAC items from ingestion.")
+    next: Optional[str] = Field(None, description="Next token (json) to load")
 
     @validator("next", pre=True)
     def b64_encode_next(cls, next):
@@ -205,8 +205,8 @@ class ListIngestionResponse(BaseModel):
 
 
 class UpdateIngestionRequest(BaseModel):
-    status: Status = None
-    message: str = None
+    status: Status = Field(None, description="Status of the ingestion")
+    message: str = Field(None, description="Message of the ingestion")
 
 
 class WorkflowInputBase(BaseModel):
