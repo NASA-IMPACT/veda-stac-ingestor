@@ -48,17 +48,18 @@ The request body should be in JSON format and should contain the fields that spe
 The `/ingestions/{ingestion_id}` GET endpoint allows retrieving information about a
  specific ingestion, including its current status and other metadata.
 
-To cancel an ingestion, the user must provide the ingestion id to the DELETE `/
-ingestions/{ingestion_id}` API.
+To cancel an ingestion, the user must provide the ingestion id to the DELETE
+ `/ingestions/{ingestion_id}` API.
 
 To update an ingestion, the user must provide the ingestion id and the new information
  to the PUT `/ingestions/{ingestion_id}` API.
 
 ## Collections
 The collection API is used to create a new STAC collection dataset.
-The input to the collection API is a STAC collection which follows the STAC collection
- specification `https://github.com/radiantearth/stac-spec/blob/v1.0.0/collection-spec/
- collection-spec.md`.
+The input to the collection API is a STAC collection which follows the STAC
+ collection specification.
+     `https://github.com/radiantearth/stac-spec/blob/v1.0.0/collection-spec/collection-spec.md`
+
 Following is a sample input for collection API:
 ```
 {
@@ -107,8 +108,9 @@ The workflow execution API is used to start a new workflow execution. The workfl
 To run a workflow execution, the user must provide the following information:
 
 **For s3 discovery:**
-We use input from `https://github.com/NASA-IMPACT/veda-data-pipelines/tree/main/data/
-step_function_inputs`.
+We use inputs for the workflow from the veda-data-pipelines repository.
+ `https://github.com/NASA-IMPACT/veda-data-pipelines/tree/main/datastep_function_inputs`.
+
 Following is a sample input for s3 discovery:
 ```
 {
@@ -126,7 +128,4 @@ Following is a sample input for s3 discovery:
 
 We can use `workflow_executions/workflow_execution_id` to get the status of the
  workflow execution.
-
-**For cmr discovery:**
-
 """
