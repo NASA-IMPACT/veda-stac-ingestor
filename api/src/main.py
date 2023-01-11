@@ -7,7 +7,6 @@ from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import Field
 
 from .doc import DESCRIPTION
 from . import (
@@ -34,14 +33,12 @@ settings = (
 app = FastAPI(
     root_path=settings.root_path,
     title="VEDA STAC Ingestor API Documentation",
-    description=description,
+    description=DESCRIPTION,
     license_info={
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    contact={
-        "url":"https://github.com/NASA-IMPACT/veda-stac-ingestor"
-        }
+    contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
 )
 
 publisher = collection_loader.Publisher()
@@ -210,11 +207,7 @@ async def get_workflow_execution_status(
     return helpers.get_status(workflow_execution_id)
 
 
-@app.post(
-    "/token",
-    tags=["Auth"],
-    response_model=schemas.AuthResponse
-)
+@app.post("/token", tags=["Auth"], response_model=schemas.AuthResponse)
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Dict:
@@ -282,11 +275,7 @@ async def publish_dataset(
     return return_dict
 
 
-@app.get(
-    "/auth/me",
-    tags=["Auth"],
-    response_model=schemas.WhoAmIResponse
-)
+@app.get("/auth/me", tags=["Auth"], response_model=schemas.WhoAmIResponse)
 def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT

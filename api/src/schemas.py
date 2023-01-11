@@ -13,7 +13,6 @@ from pydantic import (
     BaseModel,
     Field,
     PositiveInt,
-    dataclasses,
     error_wrappers,
     root_validator,
     validator,
@@ -93,8 +92,12 @@ class Status(str, enum.Enum):
 
 
 class BaseResponse(BaseModel):
-    id: str = Field(..., description="ID of the workflow execution in discover step function.")
-    status: Status = Field(..., description="Status of the workflow execution in discover step function.")
+    id: str = Field(
+        ..., description="ID of the workflow execution in discover step function."
+    )
+    status: Status = Field(
+        ..., description="Status of the workflow execution in discover step function."
+    )
 
 
 class ExecutionResponse(BaseResponse):
@@ -104,18 +107,30 @@ class ExecutionResponse(BaseResponse):
 
 class AuthResponse(BaseModel):
     AccessToken: str = Field(..., description="Token used to authenticate the user.")
-    ExpiresIn: int = Field(..., description="Number of seconds before the AccessToken expires.")
-    TokenType: str = Field(..., description="Type of token being returned (e.g. 'Bearer').")
-    RefreshToken: str = Field(..., description="Token used to refresh the AccessToken when it expires.")
-    IdToken: str = Field(..., description="Token containing information about the authenticated user.")
+    ExpiresIn: int = Field(
+        ..., description="Number of seconds before the AccessToken expires."
+    )
+    TokenType: str = Field(
+        ..., description="Type of token being returned (e.g. 'Bearer')."
+    )
+    RefreshToken: str = Field(
+        ..., description="Token used to refresh the AccessToken when it expires."
+    )
+    IdToken: str = Field(
+        ..., description="Token containing information about the authenticated user."
+    )
 
 
 class WhoAmIResponse(BaseModel):
     sub: str = Field(..., description="A unique identifier for the user")
-    cognito_groups: List[str] = Field(..., description="A list of Cognito groups the user belongs to")
+    cognito_groups: List[str] = Field(
+        ..., description="A list of Cognito groups the user belongs to"
+    )
     iss: str = Field(..., description="The issuer of the token")
     client_id: str = Field(..., description="The client ID of the authenticated app")
-    origin_jti: str = Field(..., description="A unique identifier for the authentication event")
+    origin_jti: str = Field(
+        ..., description="A unique identifier for the authentication event"
+    )
     event_id: str = Field(..., description="A unique identifier for the event")
     token_use: str = Field(..., description="The intended use of the token")
     scope: str = Field(..., description="The scope of the token")
@@ -128,13 +143,20 @@ class WhoAmIResponse(BaseModel):
 
 
 class WorkflowExecutionResponse(BaseModel):
-    id: str = Field(..., description="ID of the workflow execution in discover step function.")
-    status: Status = Field(..., description="Status of the workflow execution in discover step function.")
+    id: str = Field(
+        ..., description="ID of the workflow execution in discover step function."
+    )
+    status: Status = Field(
+        ..., description="Status of the workflow execution in discover step function."
+    )
+
 
 class Ingestion(BaseModel):
     id: str = Field(..., description="ID of the STAC item")
     status: Status = Field(..., description="Status of the ingestion")
-    message: Optional[str] = Field(None, description="Message returned from the step function.")
+    message: Optional[str] = Field(
+        None, description="Message returned from the step function."
+    )
     created_by: str = Field(..., description="User who created the ingestion")
     created_at: datetime = Field(None, description="Timestamp of ingestion creation")
     updated_at: datetime = Field(None, description="Timestamp of ingestion update")
@@ -168,7 +190,7 @@ class ListIngestionRequest(BaseModel):
     status: Status = Field(Status.queued, description="Status of the ingestion")
     limit: PositiveInt = Field(None, description="Limit number of results")
     next: Optional[str] = Field(None, description="Next token (json) to load")
-    
+
     def __post_init_post_parse__(self) -> None:
         # https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1049987786
         if self.next is None:
@@ -218,10 +240,10 @@ class WorkflowInputBase(BaseModel):
     def exists(cls, collection):
         """
         Validate that the collection exists.
-        
+
         Parameters:
         - collection (str): Name of the collection to be validated.
-        
+
         Returns:
         - str: Name of the collection.
         """
