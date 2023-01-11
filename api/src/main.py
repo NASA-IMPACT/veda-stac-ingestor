@@ -264,8 +264,8 @@ async def publish_dataset(dataset: schemas.Dataset):
         },
         "links": [],
         "type": "Collection",
-        "dashboard:time_density": dataset.dashboard_time_density,
-        "dashboard:is_periodic": dataset.dashboard_is_periodic,
+        "dashboard:time_density": dataset.time_density,
+        "dashboard:is_periodic": dataset.is_periodic,
     }
     collection = schemas.DashboardCollection.parse_obj(collection_data)
     publish_collection(collection)
