@@ -16,6 +16,7 @@ from . import (
     helpers,
     schemas,
     services,
+    validators
 )
 
 settings = (
@@ -202,8 +203,6 @@ def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
     # TODO this is commented out until the raster API fixes this endpoint
     # https://github.com/NASA-IMPACT/delta-backend/issues/133
-
-    # for sample in dataset.sample_files:
     #    url = f"{settings.raster_url}/cog/validate?url={sample}"
     #    try:
     #        response = requests.get(url)
@@ -215,7 +214,7 @@ def validate_dataset(dataset: schemas.Dataset):
     #    except Exception as e:
     #        raise HTTPException(
     #            status_code=422,
-    #            detail=(f"Sample file {sample} is invalid: {e}"),
+    #            detail=(f"Sample file {sample} is an invalid COG: {e}"),
     #        )
     return {
         f"Dataset metadata is valid and ready to be published - {dataset.collection}"
