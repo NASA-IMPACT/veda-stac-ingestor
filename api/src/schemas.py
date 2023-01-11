@@ -212,7 +212,9 @@ class ListIngestionRequest(BaseModel):
 
 
 class ListIngestionResponse(BaseModel):
-    items: List[Ingestion] = Field(..., description="List of STAC items from ingestion.")
+    items: List[Ingestion] = Field(
+        ..., description="List of STAC items from ingestion."
+    )
     next: Optional[str] = Field(None, description="Next token (json) to load")
 
     @validator("next", pre=True)
