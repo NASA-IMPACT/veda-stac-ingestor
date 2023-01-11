@@ -109,7 +109,7 @@ To run a workflow execution, the user must provide the following information:
 
 **For s3 discovery:**
 We use inputs for the workflow from the veda-data-pipelines repository.
- `https://github.com/NASA-IMPACT/veda-data-pipelines/tree/main/datastep_function_inputs`.
+ `https://github.com/NASA-IMPACT/veda-data-pipelines/tree/main/data/step_function_inputs`.
 
 Following is a sample input for s3 discovery:
 ```
