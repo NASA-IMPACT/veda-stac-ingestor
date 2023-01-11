@@ -65,9 +65,9 @@ class DashboardCollection(Collection):
     extent: DatetimeExtent
 
     @validator("item_assets")
-    def cog_default_exists(cls, v):
-        validators.cog_default_exists(item_assets=v)
-        return v
+    def cog_default_exists(cls, item_assets):
+        validators.cog_default_exists(item_assets)
+        return item_assets
 
 
 class Status(str, enum.Enum):
@@ -189,7 +189,7 @@ class S3Input(WorkflowInputBase):
     discovery: Literal["s3"]
     prefix: str
     bucket: str
-    filename_regex: str
+    filename_regex: str = "[\s\S]*"  # default to match all files in prefix
     datetime_range: Optional[str]
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
@@ -219,8 +219,8 @@ class Dataset(BaseModel):
     title: str
     description: str
     license: str
-    dashboard_is_periodic: bool
-    dashboard_time_density: str
+    is_periodic: bool
+    time_density: Optional[str]
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
@@ -230,49 +230,58 @@ class Dataset(BaseModel):
         extra = Extra.allow
 
     @root_validator
-    def check_time_density(cls, v):
-        if v["dashboard_is_periodic"] and v["dashboard_time_density"] not in [
+    def check_time_density(cls, values):
+        if values["is_periodic"] and values["time_density"] not in [
             "month",
             "day",
             "year",
         ]:
-            raise ValueError("Invalid time density")
-        if not v["dashboard_is_periodic"] and v["dashboard_time_density"] != "null":
-            raise ValueError("Invalid time density")
-        return v
+            raise ValueError(
+                "Invalid time density - if is_periodic is true, time_density must be one of 'month', 'day', or 'year'"
+            )
+        if not values["is_periodic"] and values["time_density"] != None:
+            raise ValueError(
+                "Invalid time density - if is_periodic is false, time_density must be null"
+            )
+        return values
 
     # collection id must be all lowercase, with optional - delimiter
     @validator("collection")
-    def check_id(cls, v):
-        if not re.match(r"[a-z]+(?:-[a-z]+)*", v):
-            raise ValueError("Invalid id")
-        return v
+    def check_id(cls, collection):
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            raise ValueError(
+                "Invalid id - id must be all lowercase, with optional '-' delimiters"
+            )
+        return collection
 
     # all sample files must begin with prefix and their last element must match regex
     @root_validator
-    def check_sample_files(cls, v):
-        if "s3" not in [item.discovery for item in v["discovery_items"]]:
+    def check_sample_files(cls, values):
+        if "s3" not in [item.discovery for item in values["discovery_items"]]:
             print("No s3 discovery items to validate sample files against")
-            return v
+            return values
         # TODO cmr handling/validation
+
         valid_matches = []
-        for item in v["discovery_items"]:
+        for item in values["discovery_items"]:
             if item.discovery == "s3":
                 valid_matches.append(
                     {"prefix": item.prefix, "regex": item.filename_regex}
                 )
-        for fname in v["sample_files"]:
-            if not any([fname.startswith(match["prefix"]) for match in valid_matches]):
-                raise ValidationError(
-                    f"Invalid sample file - {fname} doesn't match prefix"
-                )
-            if not any(
-                [
-                    re.search(match["regex"], fname.split("/")[-1])
-                    for match in valid_matches
-                ]
-            ):
-                raise ValidationError(
-                    f"Invalid sample file - {fname} doesn't match provided regex"
-                )
-        return v
+
+        invalid_fnames = []
+        for fname in values["sample_files"]:
+            prefix_matches = [
+                fname.startswith(match["prefix"]) for match in valid_matches
+            ]
+            regex_matches = [
+                re.search(match["regex"], fname.split("/")[-1])
+                for match in valid_matches
+            ]
+            if not any([a and b for a, b in zip(prefix_matches, regex_matches)]):
+                invalid_fnames.append(fname)
+        if invalid_fnames:
+            raise ValidationError(
+                f"Invalid sample file(s) - {invalid_fnames} do not match any of the provided prefix/filename_regex combinations"
+            )
+        return values
