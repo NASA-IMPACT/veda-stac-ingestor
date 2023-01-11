@@ -1,4 +1,4 @@
-description = """
+DESCRIPTION = """
 # Overview
 The VEDA STAC Ingestor is a service that allows users and other services to add new records to the STAC database in order to manage geo spatial data.
 It performs validation on the records, called STAC items, to ensure that they meet the STAC specification, 

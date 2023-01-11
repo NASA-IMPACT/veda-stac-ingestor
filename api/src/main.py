@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import Field
 
+from .doc import DESCRIPTION
 from . import (
     auth,
     collection as collection_loader,
