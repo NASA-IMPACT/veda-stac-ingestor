@@ -136,8 +136,8 @@ class Ingestion(BaseModel):
     status: Status = Field(..., description="Status of the ingestion")
     message: Optional[str] = Field(None, description="Message returned from the step function.")
     created_by: str = Field(..., description="User who created the ingestion")
-    created_at: datetime = Field(..., description="Timestamp of ingestion creation")
-    updated_at: datetime = Field(..., description="Timestamp of ingestion update")
+    created_at: datetime = Field(None, description="Timestamp of ingestion creation")
+    updated_at: datetime = Field(None, description="Timestamp of ingestion update")
 
     item: Item = Field(..., description="STAC item to ingest")
 
@@ -164,7 +164,6 @@ class Ingestion(BaseModel):
         return json.loads(self.json(by_alias=by_alias), parse_float=Decimal)
 
 
-@dataclasses.dataclass
 class ListIngestionRequest(BaseModel):
     status: Status = Field(Status.queued, description="Status of the ingestion")
     limit: PositiveInt = Field(None, description="Limit number of results")
