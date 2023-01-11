@@ -189,7 +189,7 @@ class S3Input(WorkflowInputBase):
     discovery: Literal["s3"]
     prefix: str
     bucket: str
-    filename_regex: str = "[\s\S]*"  # default to match all files in prefix
+    filename_regex: str = r"[\s\S]*"  # default to match all files in prefix
     datetime_range: Optional[str]
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
@@ -254,34 +254,28 @@ class Dataset(BaseModel):
             )
         return collection
 
-    # all sample files must begin with prefix and their last element must match regex
     @root_validator
     def check_sample_files(cls, values):
         if "s3" not in [item.discovery for item in values["discovery_items"]]:
-            print("No s3 discovery items to validate sample files against")
             return values
         # TODO cmr handling/validation
-
-        valid_matches = []
-        for item in values["discovery_items"]:
-            if item.discovery == "s3":
-                valid_matches.append(
-                    {"prefix": item.prefix, "regex": item.filename_regex}
-                )
-
-        invalid_fnames = []
         for fname in values["sample_files"]:
-            prefix_matches = [
-                fname.startswith(match["prefix"]) for match in valid_matches
-            ]
-            regex_matches = [
-                re.search(match["regex"], fname.split("/")[-1])
-                for match in valid_matches
-            ]
-            if not any([a and b for a, b in zip(prefix_matches, regex_matches)]):
-                invalid_fnames.append(fname)
-        if invalid_fnames:
-            raise ValidationError(
-                f"Invalid sample file(s) - {invalid_fnames} do not match any of the provided prefix/filename_regex combinations"
-            )
+            found_match = False
+            for item in values["discovery_items"]:
+                if item.discovery == "s3" and \
+                    re.search(item.filename_regex, fname.split("/")[-1]) and \
+                    fname.startswith(item.prefix):
+                    if item.datetime_range:
+                        try:
+                            
+                            validators.extract_dates(fname, item.datetime_range)
+                        except:
+                            raise ValueError(
+                                f"Invalid sample file - {fname} does not align with the provided datetime_range, and a datetime could not be extracted."
+                            )
+                    found_match = True
+            if not found_match:
+                raise ValueError(
+                    f"Invalid sample file - {fname} does not match any of the provided prefix/filename_regex combinations"
+                )
         return values
