@@ -14,7 +14,6 @@ from pydantic import (
     Extra,
     Field,
     PositiveInt,
-    ValidationError,
     dataclasses,
     error_wrappers,
     root_validator,
@@ -237,12 +236,11 @@ class Dataset(BaseModel):
             "year",
         ]:
             raise ValueError(
-                "Invalid time density - if is_periodic is true, time_density must be one of 'month', 'day', or 'year'"
+                "If is_periodic is true, time_density must be one of"
+                "'month', 'day', or 'year'"
             )
-        if not values["is_periodic"] and values["time_density"] != None:
-            raise ValueError(
-                "Invalid time density - if is_periodic is false, time_density must be null"
-            )
+        if not values["is_periodic"] and values["time_density"] is not None:
+            raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
     # collection id must be all lowercase, with optional - delimiter
@@ -262,20 +260,24 @@ class Dataset(BaseModel):
         for fname in values["sample_files"]:
             found_match = False
             for item in values["discovery_items"]:
-                if item.discovery == "s3" and \
-                    re.search(item.filename_regex, fname.split("/")[-1]) and \
-                    fname.startswith(item.prefix):
+                if (
+                    item.discovery == "s3"
+                    and re.search(item.filename_regex, fname.split("/")[-1])
+                    and fname.startswith(item.prefix)
+                ):
                     if item.datetime_range:
                         try:
-                            
                             validators.extract_dates(fname, item.datetime_range)
-                        except:
+                        except Exception:
                             raise ValueError(
-                                f"Invalid sample file - {fname} does not align with the provided datetime_range, and a datetime could not be extracted."
+                                f"Invalid sample file - {fname} does not align"
+                                "with the provided datetime_range, and a datetime"
+                                "could not be extracted."
                             )
                     found_match = True
             if not found_match:
                 raise ValueError(
-                    f"Invalid sample file - {fname} does not match any of the provided prefix/filename_regex combinations"
+                    f"Invalid sample file - {fname} does not match any of the"
+                    "provided prefix/filename_regex combinations"
                 )
         return values
