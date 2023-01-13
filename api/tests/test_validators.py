@@ -1,12 +1,12 @@
 import pytest
 from pydantic import ValidationError
-from pytest_mock import mocker
 from src.schemas import Dataset
 
+# noqa E501
 sample_data = {
     "collection": "caldor-fire-behavior",
     "title": "Caldor Fire Behavior",
-    "description": "`.geojson` and `tif` files describing the progression and active fire behavior of the 2021 Caldor Fire in California via the algorithm detailed in https://www.nature.com/articles/s41597-022-01343-0. This includes an extra `.tif` file detailing the soil burn severity (SBS) conditions provided by the [Burned Area Emergency Response](https://burnseverity.cr.usgs.gov/baer/) team.",
+    "description": "short description",
     "license": "CC0",
     "is_periodic": False,
     "time_density": None,
@@ -35,7 +35,7 @@ sample_data = {
 sample_data_datetime = {
     "collection": "caldor-fire-behavior",
     "title": "Caldor Fire Behavior",
-    "description": "`.geojson` and `tif` files describing the progression and active fire behavior of the 2021 Caldor Fire in California via the algorithm detailed in https://www.nature.com/articles/s41597-022-01343-0. This includes an extra `.tif` file detailing the soil burn severity (SBS) conditions provided by the [Burned Area Emergency Response](https://burnseverity.cr.usgs.gov/baer/) team.",
+    "description": "short description",
     "license": "CC0",
     "is_periodic": False,
     "time_density": None,
@@ -54,12 +54,13 @@ sample_data_datetime = {
             "prefix": "foo/",
             "bucket": "veda-data-store-staging",
             "filename_regex": "^(.*)bar.tif$",
-            "datetime_range": 'month',
+            "datetime_range": "month",
             "start_datetime": "2021-08-15T00:00:00Z",
             "end_datetime": "2021-10-21T12:00:00Z",
         }
     ],
 }
+
 
 # used for mocking root validator
 def always_true_root_validator(cls, vals):

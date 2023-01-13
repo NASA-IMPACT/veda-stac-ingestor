@@ -16,7 +16,6 @@ from . import (
     helpers,
     schemas,
     services,
-    validators
 )
 
 settings = (
