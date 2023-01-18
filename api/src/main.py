@@ -200,21 +200,19 @@ async def get_token(
 )
 def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
-    # TODO this is commented out until the raster API fixes this endpoint
-    # https://github.com/NASA-IMPACT/delta-backend/issues/133
-    #    url = f"{settings.raster_url}/cog/validate?url={sample}"
-    #    try:
-    #        response = requests.get(url)
-    #        if response.status_code != 200:
-    #            raise HTTPException(
-    #                status_code=response.status_code,
-    #                detail=(f"Unable to validate dataset: {response.text}"),
-    #            )
-    #    except Exception as e:
-    #        raise HTTPException(
-    #            status_code=422,
-    #            detail=(f"Sample file {sample} is an invalid COG: {e}"),
-    #        )
+    url = f"{settings.raster_url}/cog/validate?url={sample}"
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=(f"Unable to validate dataset: {response.text}"),
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=(f"Sample file {sample} is an invalid COG: {e}"),
+        )
     return {
         f"Dataset metadata is valid and ready to be published - {dataset.collection}"
     }

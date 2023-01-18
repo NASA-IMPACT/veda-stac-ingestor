@@ -257,6 +257,7 @@ class Dataset(BaseModel):
         if "s3" not in [item.discovery for item in values["discovery_items"]]:
             return values
         # TODO cmr handling/validation
+        invalid_fnames = []
         for fname in values["sample_files"]:
             found_match = False
             for item in values["discovery_items"]:
@@ -276,8 +277,10 @@ class Dataset(BaseModel):
                             )
                     found_match = True
             if not found_match:
-                raise ValueError(
-                    f"Invalid sample file - {fname} does not match any of the"
-                    "provided prefix/filename_regex combinations"
-                )
+                invalid_fnames.append(fname)
+        if invalid_fnames:
+            raise ValueError(
+                f"Invalid sample files - {invalid_fnames} do not match any"
+                "of the provided prefix/filename_regex combinations."
+            )
         return values
