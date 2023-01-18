@@ -160,7 +160,8 @@ async def start_workflow_execution(
     Triggers the ingestion workflow
     """
     # return helpers.trigger_discover(input, data_pipeline_arn)
-    return helpers.trigger_discovery(airflow_env, input)
+    input_dict = {k:str(v) for k,v in dict(input).items()} ## TODO: fix str conversion of Discovery.s3 and Discovery.cmr
+    return helpers.trigger_discovery(airflow_env, input_dict)
 
 
 @app.get(
