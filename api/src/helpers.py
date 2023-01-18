@@ -40,7 +40,7 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
 
 def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     assert dag_id in ("veda_discover", "veda_ingest")
-    assert type(input) == type(dict()), f'Expecting a dict but got {type(input)}'
+    assert isinstance(input, type(dict())), f"Expecting a dict but got {type(input)}"
 
     client = boto3.client("mwaa")
     token = client.create_cli_token(Name=env_name)
