@@ -8,10 +8,11 @@ from uuid import uuid4
 
 from pydantic.tools import parse_obj_as
 import requests
+import datetime
 
 
 try:
-    from .schemas import Status, BaseResponse, ExecutionResponse
+    from .schemas import Status, BaseResponse, ExecutionResponse, S3Input, CmrInput
 except ImportError:
     from schemas import Status, BaseResponse, ExecutionResponse
 
@@ -38,20 +39,32 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
     )
 
 
+def json_serialize(obj):
+    if isinstance(obj, (datetime.date, datetime.date)):
+        s = obj.isoformat()
+        if s[-6:] == "+00:00":
+            s = s.replace("+00:00", "Z")
+        return s
+    elif isinstance(obj, (CmrInput, S3Input)):
+        return "s3" if isinstance(obj, S3Input) else "cmr"
+    return str(obj)
+
+
 def execute_dag(env_name: str, input: Dict, dag_id: str) -> requests.Response:
     assert dag_id in ("veda_discover", "veda_ingest")
     assert isinstance(input, type(dict())), f"Expecting a dict but got {type(input)}"
 
     client = boto3.client("mwaa")
     token = client.create_cli_token(Name=env_name)
-    url = f"https://{token['WebServerHostname']}/aws_maa/cli"
+    url = f"https://{token['WebServerHostname']}/aws_mwaa/cli"
     headers = {
         "Authorization": f"Bearer {token['CliToken']}",
         "Content-Type": "text/plain",
     }
-    body = f"dags trigger {dag_id} -c '{json.dumps(input)}'"
+    body = f"dags trigger {dag_id} -c '{json.dumps(input, default=json_serialize)}'"
 
-    requests.post(url, data=body, headers=headers)
+    res = requests.post(url, data=body, headers=headers)
+    res.raise_for_status()
     unique_key = str(uuid4())
     return BaseResponse(
         **{
