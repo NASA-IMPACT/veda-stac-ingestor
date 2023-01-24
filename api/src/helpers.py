@@ -14,7 +14,7 @@ import datetime
 try:
     from .schemas import Status, BaseResponse, ExecutionResponse, S3Input, CmrInput
 except ImportError:
-    from schemas import Status, BaseResponse, ExecutionResponse
+    from schemas import Status, BaseResponse, ExecutionResponse, S3Input, CmrInput
 
 EXECUTION_NAME_PREFIX = "workflows-api"
 
