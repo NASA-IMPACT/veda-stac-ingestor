@@ -1,15 +1,12 @@
 import json
 from pathlib import Path
-
-import boto3
-
 from typing import Dict, Union
 from uuid import uuid4
 
+import boto3
 from pydantic.tools import parse_obj_as
 import requests
 import datetime
-
 
 try:
     from .schemas import Status, BaseResponse, ExecutionResponse, S3Input, CmrInput
@@ -24,7 +21,6 @@ def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
     Trigger a discover event.
     """
     unique_key = str(uuid4())
-
     client = boto3.client("stepfunctions")
     client.start_execution(
         stateMachineArn=data_pipeline_arn,

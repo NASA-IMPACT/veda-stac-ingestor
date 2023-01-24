@@ -3,8 +3,7 @@ import logging
 import boto3
 from fastapi import Depends, HTTPException, security
 
-from . import config, services, auth
-
+from . import auth, config, services
 
 logger = logging.getLogger(__name__)
 

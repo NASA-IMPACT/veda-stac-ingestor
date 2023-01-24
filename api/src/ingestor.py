@@ -1,13 +1,12 @@
-from datetime import datetime
-import os
 import decimal
+import os
 import traceback
+from datetime import datetime
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence
 
-
 import boto3
-from boto3.dynamodb.types import TypeDeserializer
 import ddbcereal
+from boto3.dynamodb.types import TypeDeserializer
 from pypgstac.db import PgstacDB
 
 from .auth import get_settings
@@ -15,8 +14,8 @@ from .dependencies import get_table
 from .schemas import Ingestion, Status
 from .utils import (
     IngestionType,
-    get_db_credentials,
     convert_decimals_to_float,
+    get_db_credentials,
     load_into_pgstac,
 )
 

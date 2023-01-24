@@ -2,24 +2,28 @@ import base64
 import binascii
 import enum
 import json
+import re
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional, Literal
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
 from urllib.parse import urlparse
 
 from fastapi.exceptions import RequestValidationError
 from pydantic import (
     BaseModel,
+    Extra,
+    Field,
     PositiveInt,
     dataclasses,
     error_wrappers,
-    validator,
     root_validator,
-    Field,
+    validator,
 )
-from stac_pydantic import Item, Collection, shared
+from stac_pydantic import Collection, Item, shared
+from typing_extensions import Annotated
 
 from . import validators
+from .schema_helpers import BboxExtent, DatetimeExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -52,15 +56,16 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: bool = Field(alias="dashboard:is_periodic")
+    is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
     time_density: Literal["day", "month", "year", "null"] = Field(
-        alias="dashboard:time_density", default="null"
+        default="null", alias="dashboard:time_density"
     )
     item_assets: Dict
+    extent: DatetimeExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
-        validators.cog_default_exists(item_assets=item_assets)
+        validators.cog_default_exists(item_assets)
         return item_assets
 
 
@@ -167,16 +172,11 @@ class UpdateIngestionRequest(BaseModel):
     message: str = None
 
 
-class Discovery(str, enum.Enum):
-    s3 = "s3"
-    cmr = "cmr"
-
-
 class WorkflowInputBase(BaseModel):
-    collection: str
-    discovery: Discovery
+    collection: str = ""
     upload: Optional[bool] = False
     cogify: Optional[bool] = False
+    dry_run: bool = False
 
     @validator("collection")
     def exists(cls, collection):
@@ -185,12 +185,11 @@ class WorkflowInputBase(BaseModel):
 
 
 class S3Input(WorkflowInputBase):
-    # s3 discovery
-    discovery: Literal[Discovery.s3]
-
+    discovery: Literal["s3"]
     prefix: str
     bucket: str
-    filename_regex: Optional[str]
+    filename_regex: str = r"[\s\S]*"  # default to match all files in prefix
+    datetime_range: Optional[str]
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
@@ -203,10 +202,85 @@ class S3Input(WorkflowInputBase):
 
 
 class CmrInput(WorkflowInputBase):
-    # cmr discovery
-    discovery: Literal[Discovery.cmr]
-
+    discovery: Literal["cmr"]
     version: Optional[str]
     include: Optional[str]
     temporal: Optional[List[datetime]]
     bounding_box: Optional[List[float]]
+
+
+# allows the construction of models with a list of discriminated unions
+ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator="discovery")]
+
+
+class Dataset(BaseModel):
+    collection: str
+    title: str
+    description: str
+    license: str
+    is_periodic: bool
+    time_density: Optional[str]
+    spatial_extent: BboxExtent
+    temporal_extent: TemporalExtent
+    sample_files: List[str]  # unknown how this will work with CMR
+    discovery_items: List[ItemUnion]
+
+    class Config:
+        extra = Extra.allow
+
+    @root_validator
+    def check_time_density(cls, values):
+        if values["is_periodic"] and values["time_density"] not in [
+            "month",
+            "day",
+            "year",
+        ]:
+            raise ValueError(
+                "If is_periodic is true, time_density must be one of"
+                "'month', 'day', or 'year'"
+            )
+        if not values["is_periodic"] and values["time_density"] is not None:
+            raise ValueError("If is_periodic is false, time_density must be null")
+        return values
+
+    # collection id must be all lowercase, with optional - delimiter
+    @validator("collection")
+    def check_id(cls, collection):
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            raise ValueError(
+                "Invalid id - id must be all lowercase, with optional '-' delimiters"
+            )
+        return collection
+
+    @root_validator
+    def check_sample_files(cls, values):
+        if "s3" not in [item.discovery for item in values["discovery_items"]]:
+            return values
+        # TODO cmr handling/validation
+        invalid_fnames = []
+        for fname in values["sample_files"]:
+            found_match = False
+            for item in values["discovery_items"]:
+                if (
+                    item.discovery == "s3"
+                    and re.search(item.filename_regex, fname.split("/")[-1])
+                    and fname.startswith(item.prefix)
+                ):
+                    if item.datetime_range:
+                        try:
+                            validators.extract_dates(fname, item.datetime_range)
+                        except Exception:
+                            raise ValueError(
+                                f"Invalid sample file - {fname} does not align"
+                                "with the provided datetime_range, and a datetime"
+                                "could not be extracted."
+                            )
+                    found_match = True
+            if not found_match:
+                invalid_fnames.append(fname)
+        if invalid_fnames:
+            raise ValueError(
+                f"Invalid sample files - {invalid_fnames} do not match any"
+                "of the provided prefix/filename_regex combinations."
+            )
+        return values

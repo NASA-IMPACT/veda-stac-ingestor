@@ -1,18 +1,19 @@
 from typing import Dict
+
 from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
     aws_apigateway as apigateway,
-    aws_iam as iam,
-    aws_ec2 as ec2,
+    aws_cognito as cognito,
     aws_dynamodb as dynamodb,
+    aws_ec2 as ec2,
+    aws_iam as iam,
     aws_lambda,
     aws_lambda_event_sources as events,
     aws_lambda_python_alpha,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
-    aws_cognito as cognito,
 )
 from constructs import Construct
 

@@ -13,7 +13,7 @@ VEDA supports inclusion of cloud optimized GeoTIFFs (COGs) to its data store.
 
 1. Make sure the projection system is embedded in the COG
 2. Make sure the there's an associated `NoData` value in the COG
-3. Make sure that the COG filename contains the datetime associated with the COG in the following format. All the datetime values in the file should be preceded by the `_` underscore character. Some examples are shown below:
+3. Make sure that the COG filename is meaningful and contains the datetime associated with the COG in the following format. All the datetime values in the file should be preceded by the `_` underscore character. Some examples are shown below:
 
 #### Single datetime
 

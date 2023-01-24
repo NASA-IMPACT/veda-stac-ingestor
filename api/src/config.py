@@ -1,8 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseSettings, Field, AnyHttpUrl, constr
+from pydantic import AnyHttpUrl, BaseSettings, Field, constr
 from pydantic_ssm_settings import AwsSsmSourceConfig
-
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
@@ -19,16 +18,12 @@ class Settings(BaseSettings):
 
     stac_url: AnyHttpUrl = Field(description="URL of STAC API")
 
+    # See validate_dataset() in main.py
+    # raster_url: AnyHttpUrl = Field(description="URL of Raster API")
+
     data_access_role: AwsArn = Field(
         description="ARN of AWS Role used to validate access to S3 data"
     )
-
-    class Config(AwsSsmSourceConfig):
-        env_file = ".env"
-
-    @classmethod
-    def from_ssm(cls, stack: str):
-        return cls(_secrets_dir=f"/{stack}")
 
     data_pipeline_arn: AwsStepArn = Field(
         description="ARN of AWS step function used to trigger data ingestion"
@@ -39,3 +34,10 @@ class Settings(BaseSettings):
     client_id: str = Field(description="The Cognito APP client ID")
     client_secret: str = Field(description="The Cognito APP client secret")
     airflow_env: str = Field(description="Airflow environment on which to run the dag")
+
+    class Config(AwsSsmSourceConfig):
+        env_file = ".env"
+
+    @classmethod
+    def from_ssm(cls, stack: str):
+        return cls(_secrets_dir=f"/{stack}")
