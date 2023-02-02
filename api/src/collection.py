@@ -20,7 +20,7 @@ def ingest(collection: DashboardCollection):
     """
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
     collection = [
-        convert_decimals_to_float(collection.dict(by_alias=True, exclude_unset=True))
+        convert_decimals_to_float(collection.to_dict())
     ]
     with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
         load_into_pgstac(db=db, ingestions=collection, table=IngestionType.collections)

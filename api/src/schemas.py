@@ -212,7 +212,6 @@ class CmrInput(WorkflowInputBase):
 # allows the construction of models with a list of discriminated unions
 ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator="discovery")]
 
-
 class Dataset(BaseModel):
     collection: str
     title: str
@@ -220,13 +219,15 @@ class Dataset(BaseModel):
     license: str
     is_periodic: bool
     time_density: Optional[str]
-    spatial_extent: BboxExtent
-    temporal_extent: TemporalExtent
-    sample_files: List[str]  # unknown how this will work with CMR
-    discovery_items: List[ItemUnion]
 
-    class Config:
-        extra = Extra.allow
+    # collection id must be all lowercase, with optional - delimiter
+    @validator("collection")
+    def check_id(cls, collection):
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            raise ValueError(
+                "Invalid id - id must be all lowercase, with optional '-' delimiters"
+            )
+        return collection
 
     @root_validator
     def check_time_density(cls, values):
@@ -243,14 +244,15 @@ class Dataset(BaseModel):
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
-    # collection id must be all lowercase, with optional - delimiter
-    @validator("collection")
-    def check_id(cls, collection):
-        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
-            raise ValueError(
-                "Invalid id - id must be all lowercase, with optional '-' delimiters"
-            )
-        return collection
+
+class COGDataset(Dataset):
+    spatial_extent: BboxExtent
+    temporal_extent: TemporalExtent
+    sample_files: List[str]  # unknown how this will work with CMR
+    discovery_items: List[ItemUnion]
+
+    class Config:
+        extra = Extra.allow
 
     @root_validator
     def check_sample_files(cls, values):
@@ -283,4 +285,16 @@ class Dataset(BaseModel):
                 f"Invalid sample files - {invalid_fnames} do not match any"
                 "of the provided prefix/filename_regex combinations."
             )
+        return values
+
+
+class ZarrDataset(Dataset):
+    bucket: str
+    prefix: str
+    zarr_store: str
+    xarray_kwargs: Optional[Dict] = dict()
+
+    @root_validator
+    def is_accessible(cls, values):
+        # TODO: add access logic
         return values
