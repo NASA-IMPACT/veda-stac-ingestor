@@ -200,19 +200,20 @@ async def get_token(
 )
 def validate_dataset(dataset: schemas.Dataset):
     # for all sample files in dataset, test access using raster /validate endpoint
-    url = f"{settings.raster_url}/cog/validate?url={sample}"
-    try:
-        response = requests.get(url)
-        if response.status_code != 200:
+    for sample in dataset.sample_files:
+        url = f"{settings.raster_url}/cog/validate?url={sample}"
+        try:
+            response = requests.get(url)
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=(f"Unable to validate dataset: {response.text}"),
+                )
+        except Exception as e:
             raise HTTPException(
-                status_code=response.status_code,
-                detail=(f"Unable to validate dataset: {response.text}"),
+                status_code=422,
+                detail=(f"Sample file {sample} is an invalid COG: {e}"),
             )
-    except Exception as e:
-        raise HTTPException(
-            status_code=422,
-            detail=(f"Sample file {sample} is an invalid COG: {e}"),
-        )
     return {
         f"Dataset metadata is valid and ready to be published - {dataset.collection}"
     }
@@ -260,7 +261,7 @@ async def publish_dataset(dataset: schemas.Dataset):
         },
         "links": [],
         "type": "Collection",
-        "dashboard:time_density": dataset.time_density,
+        "dashboard:time_density": dataset.time_density if dataset.time_density else 'null',
         "dashboard:is_periodic": dataset.is_periodic,
     }
     collection = schemas.DashboardCollection.parse_obj(collection_data)
