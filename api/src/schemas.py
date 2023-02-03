@@ -239,7 +239,7 @@ class Dataset(BaseModel):
                 "If is_periodic is true, time_density must be one of"
                 "'month', 'day', or 'year'"
             )
-        if not values["is_periodic"] and values["time_density"] is not None:
+        if not values["is_periodic"] and values["time_density"] != 'null':
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
@@ -264,7 +264,7 @@ class Dataset(BaseModel):
                 if (
                     item.discovery == "s3"
                     and re.search(item.filename_regex, fname.split("/")[-1])
-                    and fname.startswith(item.prefix)
+                    and '/'.join(fname.split("/")[3:]).startswith(item.prefix)
                 ):
                     if item.datetime_range:
                         try:
