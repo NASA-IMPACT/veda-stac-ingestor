@@ -25,6 +25,7 @@ def test_environ():
     os.environ["DYNAMODB_TABLE"] = "test_table"
     os.environ["JWKS_URL"] = "https://test-jwks.url"
     os.environ["STAC_URL"] = "https://test-stac.url"
+    os.environ["RASTER_URL"] = "https://test-raster.url"
     os.environ["USERPOOL_ID"] = "fake_id"
 
 

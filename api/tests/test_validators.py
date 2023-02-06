@@ -9,13 +9,13 @@ sample_data = {
     "description": "short description",
     "license": "CC0",
     "is_periodic": False,
-    "time_density": None,
+    "time_density": "null",
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
         "startdate": "2021-08-14T00:00:00Z",
         "enddate": "2021-10-21T23:59:59Z",
     },
-    "sample_files": ["foo/bar.tif"],
+    "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
             "discovery": "s3",
@@ -38,13 +38,13 @@ sample_data_datetime = {
     "description": "short description",
     "license": "CC0",
     "is_periodic": False,
-    "time_density": None,
+    "time_density": "null",
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
         "startdate": "2021-08-14T00:00:00Z",
         "enddate": "2021-10-21T23:59:59Z",
     },
-    "sample_files": ["foo/bar.tif"],
+    "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
             "discovery": "s3",
