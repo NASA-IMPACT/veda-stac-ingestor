@@ -261,7 +261,9 @@ async def publish_dataset(dataset: schemas.Dataset):
         },
         "links": [],
         "type": "Collection",
-        "dashboard:time_density": dataset.time_density if dataset.time_density else 'null',
+        "dashboard:time_density": dataset.time_density
+        if dataset.time_density
+        else "null",
         "dashboard:is_periodic": dataset.is_periodic,
     }
     collection = schemas.DashboardCollection.parse_obj(collection_data)
