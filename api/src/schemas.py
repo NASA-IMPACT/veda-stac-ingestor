@@ -57,8 +57,9 @@ class AccessibleItem(Item):
 
 class DashboardCollection(Collection):
     is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Literal["day", "month", "year", "null"] = Field(
-        default="null", alias="dashboard:time_density"
+    time_density: Optional[str] = Field(
+        ...,
+        alias="dashboard:time_density"
     )
     item_assets: Dict
     extent: DatetimeExtent
@@ -67,6 +68,13 @@ class DashboardCollection(Collection):
     def cog_default_exists(cls, item_assets):
         validators.cog_default_exists(item_assets)
         return item_assets
+
+    # Literal[str, None] doesn't quite work for null field inputs from a dict()
+    @validator("time_density")
+    def time_density_is_valid(cls, time_density):
+        if not time_density and time_density not in ["day", "month", "year", None]:
+            raise ValueError("If set, time_density must be either 'day, 'month' or 'year'")
+        return time_density
 
 
 class Status(str, enum.Enum):
@@ -239,7 +247,7 @@ class Dataset(BaseModel):
                 "If is_periodic is true, time_density must be one of"
                 "'month', 'day', or 'year'"
             )
-        if not values["is_periodic"] and values["time_density"] != "null":
+        if not values["is_periodic"] and values["time_density"] is not None:
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
