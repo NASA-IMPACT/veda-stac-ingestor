@@ -9,7 +9,7 @@ sample_data = {
     "description": "short description",
     "license": "CC0",
     "is_periodic": False,
-    "time_density": "null",
+    "time_density": None,
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
         "startdate": "2021-08-14T00:00:00Z",
