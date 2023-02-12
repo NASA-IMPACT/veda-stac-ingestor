@@ -57,10 +57,7 @@ class AccessibleItem(Item):
 
 class DashboardCollection(Collection):
     is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(
-        ...,
-        alias="dashboard:time_density"
-    )
+    time_density: Optional[str] = Field(..., alias="dashboard:time_density")
     item_assets: Dict
     extent: DatetimeExtent
 
@@ -73,7 +70,9 @@ class DashboardCollection(Collection):
     @validator("time_density")
     def time_density_is_valid(cls, time_density):
         if not time_density and time_density not in ["day", "month", "year", None]:
-            raise ValueError("If set, time_density must be either 'day, 'month' or 'year'")
+            raise ValueError(
+                "If set, time_density must be either 'day, 'month' or 'year'"
+            )
         return time_density
 
 
