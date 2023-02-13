@@ -54,7 +54,13 @@ class Publisher:
         "dashboard:is_periodic": "{is_periodic}"
     }"""
 
-    def get_template(self, dataset: Union[ZarrDataset, COGDataset]):
+    def __init__(self) -> None:
+        self.func_map = {
+            "zarr": self.create_zarr_collection,
+            "cog": self.create_cog_collection,
+        }
+
+    def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
         format_args = {
             "collection": dataset.collection,
             "title": dataset.title,
@@ -63,20 +69,14 @@ class Publisher:
             "time_density": dataset.time_density,
             "is_periodic": dataset.is_periodic,
         }
-        temp = json.loads(Publisher.common_template)
-        formatted_data = {
+        collection_json = json.loads(Publisher.common_template)
+        collection_formatted = {
             key: value.format(**format_args) if type(value) == str else value
-            for key, value in temp.items()
+            for key, value in collection_json.items()
         }
-        return formatted_data
+        return collection_formatted
 
-    def __init__(self):
-        self.func_map = {
-            "zarr": self.create_zarr_collection,
-            "cog": self.create_cog_collection,
-        }
-
-    def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> str:
+    def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> dict:
         template = self.get_template(dataset)
         template["assets"] = {
             "zarr": {
@@ -94,7 +94,7 @@ class Publisher:
         }
         return template
 
-    def create_zarr_collection(self, dataset: ZarrDataset) -> Collection:
+    def create_zarr_collection(self, dataset: ZarrDataset) -> dict:
         """
         Creates a zarr stac collection based off of the user input
         """
@@ -117,7 +117,7 @@ class Publisher:
         )
         return collection.to_dict()
 
-    def create_cog_collection(self, dataset: COGDataset):
+    def create_cog_collection(self, dataset: COGDataset) -> dict:
         collection_stac = self.get_template(dataset)
         collection_stac["extent"] = SpatioTemporalExtent.parse_obj(
             {
@@ -151,8 +151,8 @@ class Publisher:
         }
         return collection_stac
 
-    def generate_stac(self, dataset: Union[ZarrDataset, COGDataset], coll_type: str):
-        create_function = self.func_map.get(coll_type, self.create_cog_collection)
+    def generate_stac(self, dataset: Union[ZarrDataset, COGDataset], data_type: str) -> dict:
+        create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 
     def ingest(self, collection: DashboardCollection):
