@@ -18,7 +18,7 @@ class DatetimeInterval(TimeInterval):
     interval: List[List[Union[datetime, None]]]
 
 
-class DatetimeExtent(Extent):
+class SpatioTemporalExtent(Extent):
     # reimplement stac_pydantic's Extent to leverage datetime types
     temporal: DatetimeInterval
 
