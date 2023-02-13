@@ -57,10 +57,7 @@ class AccessibleItem(Item):
 
 class DashboardCollection(Collection):
     is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(
-        ...,
-        alias="dashboard:time_density"
-    )
+    time_density: Optional[str] = Field(..., alias="dashboard:time_density")
     item_assets: Optional[Dict]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
@@ -74,7 +71,9 @@ class DashboardCollection(Collection):
     @validator("time_density")
     def time_density_is_valid(cls, time_density):
         if not time_density and time_density not in ["day", "month", "year", None]:
-            raise ValueError("If set, time_density must be either 'day, 'month' or 'year'")
+            raise ValueError(
+                "If set, time_density must be one of 'day, 'month' or 'year'"
+            )
         return time_density
 
 
@@ -208,11 +207,11 @@ class S3Input(WorkflowInputBase):
 
     @root_validator
     def is_accessible(cls, values):
-        bucket, prefix, zarr_store = values.get("bucket"), values.get("prefix"), values.get("zarr_store")
+        bucket = values.get("bucket")
+        prefix = values.get("prefix")
+        zarr_store = values.get("zarr_store")
         validators.s3_bucket_object_is_accessible(
-            bucket=bucket,
-            prefix=prefix,
-            zarr_store=zarr_store
+            bucket=bucket, prefix=prefix, zarr_store=zarr_store
         )
         return values
 
@@ -227,6 +226,7 @@ class CmrInput(WorkflowInputBase):
 
 # allows the construction of models with a list of discriminated unions
 ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator="discovery")]
+
 
 class Dataset(BaseModel):
     collection: str
@@ -261,15 +261,17 @@ class Dataset(BaseModel):
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
+
 class DataType(str, enum.Enum):
     cog = "cog"
     zarr = "zarr"
+
 
 class COGDataset(Dataset):
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
-    data_type: Literal["cog"]
+    data_type: Literal[DataType.cog]
 
     class Config:
         extra = Extra.allow
@@ -283,11 +285,13 @@ class COGDataset(Dataset):
         for fname in values["sample_files"]:
             found_match = False
             for item in values["discovery_items"]:
-                if all([
-                    item.discovery == "s3",
-                    re.search(item.filename_regex, fname.split("/")[-1]),
-                    "/".join(fname.split("/")[3:]).startswith(item.prefix)
-                ]):
+                if all(
+                    [
+                        item.discovery == "s3",
+                        re.search(item.filename_regex, fname.split("/")[-1]),
+                        "/".join(fname.split("/")[3:]).startswith(item.prefix),
+                    ]
+                ):
                     if item.datetime_range:
                         try:
                             validators.extract_dates(fname, item.datetime_range)
@@ -314,16 +318,19 @@ class ZarrDataset(Dataset):
     y_dimension: Optional[str]
     temporal_dimension: Optional[str]
     reference_system: Optional[int]
-    data_type: Literal["zarr"]
+    data_type: Literal[DataType.zarr]
 
     @validator("discovery_items")
     def only_one_discover_item(cls, discovery_items):
         if len(discovery_items) != 1:
-            raise ValueError(
-                "Zarr dataset should have exactly one discovery item"
-            )
+            raise ValueError("Zarr dataset should have exactly one discovery item")
         if not discovery_items[0].get("zarr_store"):
             raise ValueError(
                 "Zarr dataset should include zarr_store in its discovery item"
             )
         return discovery_items
+
+
+DatasetUnion = Annotated[
+    Union[COGDataset, ZarrDataset], Field(discriminator="data_type")
+]

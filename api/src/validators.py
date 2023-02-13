@@ -50,7 +50,7 @@ def s3_bucket_object_is_accessible(bucket: str, prefix: str, zarr_store: str):
     except client.exceptions.NoSuchBucket:
         raise ValueError("Bucket doesn't exist.")
     except client.exceptions.ClientError as e:
-        raise ValueError("S3 access denied")
+        raise ValueError(f"Access denied: {e.__dict__['response']['Error']['Message']}")
     content = result.get("Contents", [])
     # if the prefix exists, but no items exist, the content still has one element
     if len(content) <= 1:

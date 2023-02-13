@@ -31,6 +31,7 @@ app = FastAPI(root_path=settings.root_path)
 
 publisher = collection_loader.Publisher()
 
+
 @app.get(
     "/ingestions", response_model=schemas.ListIngestionResponse, tags=["Ingestion"]
 )
@@ -223,23 +224,21 @@ def validate_dataset(dataset: schemas.COGDataset):
 @app.post(
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
-async def publish_dataset(
-    dataset: Union[schemas.COGDataset, schemas.ZarrDataset] = Body(..., discriminator='data_type')
-):
+async def publish_dataset(dataset: schemas.DatasetUnion):
     # Construct and load collection
     collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
     collection = schemas.DashboardCollection.parse_obj(collection_data)
     publisher.ingest(collection)
 
-    return_dict = {
-        "message": f"Successfully published dataset: {dataset.collection}"
-    }
+    return_dict = {"message": f"Successfully published dataset: {dataset.collection}"}
 
-    if dataset.data_type == "cog":
+    if dataset.data_type == schemas.DataType.cog:
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
             await start_workflow_execution(discovery)
-            return_dict["message"] += f"Initiated workflows for {len(dataset.discovery_items)} items."
+            return_dict[
+                "message"
+            ] += f"Initiated workflows for {len(dataset.discovery_items)} items."
 
     return return_dict
 

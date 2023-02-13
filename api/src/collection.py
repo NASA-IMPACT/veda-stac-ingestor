@@ -13,8 +13,10 @@ from pypgstac.db import PgstacDB
 from .schemas import (
     COGDataset,
     DashboardCollection,
+    DatasetUnion,
     SpatioTemporalExtent,
     ZarrDataset,
+    DataType,
 )
 from .utils import (
     IngestionType,
@@ -55,8 +57,8 @@ class Publisher:
 
     def __init__(self) -> None:
         self.func_map = {
-            "zarr": self.create_zarr_collection,
-            "cog": self.create_cog_collection,
+            DataType.zarr: self.create_zarr_collection,
+            DataType.cog: self.create_cog_collection,
         }
 
     def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
@@ -150,7 +152,7 @@ class Publisher:
         }
         return collection_stac
 
-    def generate_stac(self, dataset: Union[ZarrDataset, COGDataset], data_type: str) -> dict:
+    def generate_stac(self, dataset: DatasetUnion, data_type: str) -> dict:
         create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 
