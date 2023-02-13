@@ -276,7 +276,6 @@ class COGDataset(Dataset):
 
     @root_validator
     def check_sample_files(cls, values):
-        print(values)
         if "s3" not in [item.discovery for item in values["discovery_items"]]:
             return values
         # TODO cmr handling/validation
