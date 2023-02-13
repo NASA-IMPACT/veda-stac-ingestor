@@ -38,7 +38,7 @@ sample_data_datetime = {
     "description": "short description",
     "license": "CC0",
     "is_periodic": False,
-    "time_density": "null",
+    "time_density": None,
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
         "startdate": "2021-08-14T00:00:00Z",
@@ -73,6 +73,9 @@ def test_dataset_check_sample_files(mocker):
     mocker.patch("src.validators.s3_bucket_object_is_accessible", return_value=True)
     sample_dataset = Dataset(**sample_data)
     assert sample_dataset  # if exists, validation passed
+    sample_data["time_density"] = "null"
+    with pytest.raises(ValidationError):
+        sample_dataset = Dataset(**sample_data)
     sample_data["sample_files"] = ["bar/foo.tif", "foo/bar.tif"]
     with pytest.raises(ValidationError):
         sample_dataset = Dataset(**sample_data)
