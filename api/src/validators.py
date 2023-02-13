@@ -39,15 +39,18 @@ def s3_object_is_accessible(bucket: str, key: str):
 
 
 @functools.cache
-def s3_bucket_object_is_accessible(bucket: str, prefix: str):
+def s3_bucket_object_is_accessible(bucket: str, prefix: str, zarr_store: str):
     """
-    Ensure we can send HEAD requests to S3 objects.
+    Ensure we can send HEAD requests to S3 objects in bucket.
     """
     client = boto3.client("s3", **get_s3_credentials())
+    prefix = f"{prefix}{zarr_store}" if zarr_store else prefix
     try:
         result = client.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=2)
     except client.exceptions.NoSuchBucket:
         raise ValueError("Bucket doesn't exist.")
+    except client.exceptions.ClientError as e:
+        raise ValueError("S3 access denied")
     content = result.get("Contents", [])
     # if the prefix exists, but no items exist, the content still has one element
     if len(content) <= 1:

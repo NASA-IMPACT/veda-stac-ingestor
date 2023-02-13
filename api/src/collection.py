@@ -9,7 +9,6 @@ import xstac
 import xarray as xr
 
 from pypgstac.db import PgstacDB
-from stac_pydantic import Collection
 
 from .schemas import (
     COGDataset,

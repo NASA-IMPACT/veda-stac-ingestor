@@ -208,8 +208,12 @@ class S3Input(WorkflowInputBase):
 
     @root_validator
     def is_accessible(cls, values):
-        bucket, prefix = values.get("bucket"), values.get("prefix")
-        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
+        bucket, prefix, zarr_store = values.get("bucket"), values.get("prefix"), values.get("zarr_store")
+        validators.s3_bucket_object_is_accessible(
+            bucket=bucket,
+            prefix=prefix,
+            zarr_store=zarr_store
+        )
         return values
 
 
@@ -257,6 +261,9 @@ class Dataset(BaseModel):
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
+class DataType(str, enum.Enum):
+    cog = "cog"
+    zarr = "zarr"
 
 class COGDataset(Dataset):
     spatial_extent: BboxExtent
@@ -269,6 +276,7 @@ class COGDataset(Dataset):
 
     @root_validator
     def check_sample_files(cls, values):
+        print(values)
         if "s3" not in [item.discovery for item in values["discovery_items"]]:
             return values
         # TODO cmr handling/validation
@@ -276,11 +284,11 @@ class COGDataset(Dataset):
         for fname in values["sample_files"]:
             found_match = False
             for item in values["discovery_items"]:
-                if (
-                    item.discovery == "s3"
-                    and re.search(item.filename_regex, fname.split("/")[-1])
-                    and "/".join(fname.split("/")[3:]).startswith(item.prefix)
-                ):
+                if all([
+                    item.discovery == "s3",
+                    re.search(item.filename_regex, fname.split("/")[-1]),
+                    "/".join(fname.split("/")[3:]).startswith(item.prefix)
+                ]):
                     if item.datetime_range:
                         try:
                             validators.extract_dates(fname, item.datetime_range)
@@ -309,15 +317,14 @@ class ZarrDataset(Dataset):
     reference_system: Optional[int]
     data_type: Literal["zarr"]
 
-    @root_validator
-    def is_accessible(cls, values):
-        # TODO: add access logic
-        return values
-
     @validator("discovery_items")
     def only_one_discover_item(cls, discovery_items):
         if len(discovery_items) != 1:
             raise ValueError(
                 "Zarr dataset should have exactly one discovery item"
+            )
+        if not discovery_items[0].get("zarr_store"):
+            raise ValueError(
+                "Zarr dataset should include zarr_store in its discovery item"
             )
         return discovery_items
