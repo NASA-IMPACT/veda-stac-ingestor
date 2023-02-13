@@ -23,7 +23,7 @@ from stac_pydantic import Collection, Item, shared
 from typing_extensions import Annotated
 
 from . import validators
-from .schema_helpers import BboxExtent, DatetimeExtent, TemporalExtent
+from .schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -57,16 +57,25 @@ class AccessibleItem(Item):
 
 class DashboardCollection(Collection):
     is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Literal["day", "month", "year", "null"] = Field(
-        default="null", alias="dashboard:time_density"
+    time_density: Optional[str] = Field(
+        ...,
+        alias="dashboard:time_density"
     )
-    item_assets: Dict
-    extent: DatetimeExtent
+    item_assets: Optional[Dict]
+    assets: Optional[Dict]
+    extent: SpatioTemporalExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
         validators.cog_default_exists(item_assets)
         return item_assets
+
+    # Literal[str, None] doesn't quite work for null field inputs from a dict()
+    @validator("time_density")
+    def time_density_is_valid(cls, time_density):
+        if not time_density and time_density not in ["day", "month", "year", None]:
+            raise ValueError("If set, time_density must be either 'day, 'month' or 'year'")
+        return time_density
 
 
 class Status(str, enum.Enum):
@@ -194,6 +203,9 @@ class S3Input(WorkflowInputBase):
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
 
+    class Config:
+        extra = Extra.allow
+
     @root_validator
     def is_accessible(cls, values):
         bucket, prefix = values.get("bucket"), values.get("prefix")
@@ -219,6 +231,7 @@ class Dataset(BaseModel):
     license: str
     is_periodic: bool
     time_density: Optional[str]
+    discovery_items: List[ItemUnion]
 
     # collection id must be all lowercase, with optional - delimiter
     @validator("collection")
@@ -249,7 +262,7 @@ class COGDataset(Dataset):
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
     sample_files: List[str]  # unknown how this will work with CMR
-    discovery_items: List[ItemUnion]
+    data_type: Literal["cog"]
 
     class Config:
         extra = Extra.allow
@@ -266,7 +279,7 @@ class COGDataset(Dataset):
                 if (
                     item.discovery == "s3"
                     and re.search(item.filename_regex, fname.split("/")[-1])
-                    and fname.startswith(item.prefix)
+                    and "/".join(fname.split("/")[3:]).startswith(item.prefix)
                 ):
                     if item.datetime_range:
                         try:
@@ -289,12 +302,22 @@ class COGDataset(Dataset):
 
 
 class ZarrDataset(Dataset):
-    bucket: str
-    prefix: str
-    zarr_store: str
     xarray_kwargs: Optional[Dict] = dict()
+    x_dimension: Optional[str]
+    y_dimension: Optional[str]
+    temporal_dimension: Optional[str]
+    reference_system: Optional[int]
+    data_type: Literal["zarr"]
 
     @root_validator
     def is_accessible(cls, values):
         # TODO: add access logic
         return values
+
+    @validator("discovery_items")
+    def only_one_discover_item(cls, discovery_items):
+        if len(discovery_items) != 1:
+            raise ValueError(
+                "Zarr dataset should have exactly one discovery item"
+            )
+        return discovery_items
