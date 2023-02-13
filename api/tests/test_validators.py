@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from src.schemas import Dataset
+from src.schemas import COGDataset
 
 # noqa E501
 sample_data = {
@@ -71,11 +71,11 @@ def test_dataset_check_sample_files(mocker):
     # this validator requires auth - we can skip it
     mocker.patch("src.schemas.S3Input.is_accessible", always_true_root_validator)
     mocker.patch("src.validators.s3_bucket_object_is_accessible", return_value=True)
-    sample_dataset = Dataset(**sample_data)
+    sample_dataset = COGDataset(**sample_data)
     assert sample_dataset  # if exists, validation passed
     sample_data["sample_files"] = ["bar/foo.tif", "foo/bar.tif"]
     with pytest.raises(ValidationError):
-        sample_dataset = Dataset(**sample_data)
+        sample_dataset = COGDataset(**sample_data)
     # check that filenames are checked for datetimes if a valid datetime_range is given
     with pytest.raises(ValidationError):
-        sample_dataset = Dataset(**sample_data_datetime)
+        sample_dataset = COGDataset(**sample_data_datetime)
