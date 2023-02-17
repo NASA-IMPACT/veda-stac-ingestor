@@ -71,13 +71,13 @@ def always_true_root_validator(cls, vals):
 
 def test_dataset_check_sample_files(mocker):
     # this validator requires auth - we can skip it
-    mocker.patch("src.schemas.S3Input.is_accessible", always_true_root_validator)
+    mocker.patch("src.schemas.S3Input.object_is_accessible", always_true_root_validator)
     mocker.patch("src.validators.s3_bucket_object_is_accessible", return_value=True)
     sample_dataset = COGDataset(**sample_data)
     assert sample_dataset  # if exists, validation passed
     sample_data["time_density"] = "null"
     with pytest.raises(ValidationError):
-        sample_dataset = Dataset(**sample_data)
+        sample_dataset = COGDataset(**sample_data)
     sample_data["sample_files"] = ["bar/foo.tif", "foo/bar.tif"]
     with pytest.raises(ValidationError):
         sample_dataset = COGDataset(**sample_data)

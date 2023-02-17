@@ -62,7 +62,6 @@ class DashboardCollection(Collection):
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
     item_assets: Dict
-    extent: DatetimeExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
@@ -208,7 +207,7 @@ class S3Input(WorkflowInputBase):
         extra = Extra.allow
 
     @root_validator
-    def is_accessible(cls, values):
+    def object_is_accessible(cls, values):
         bucket = values.get("bucket")
         prefix = values.get("prefix")
         zarr_store = values.get("zarr_store")
