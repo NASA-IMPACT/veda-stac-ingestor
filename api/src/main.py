@@ -224,7 +224,9 @@ def validate_dataset(dataset: schemas.COGDataset):
 @app.post(
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
-async def publish_dataset(dataset: schemas.DatasetUnion):
+async def publish_dataset(dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
+        ..., discriminator="data_type"
+    )):
     # Construct and load collection
     collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
     collection = schemas.DashboardCollection.parse_obj(collection_data)

@@ -324,7 +324,7 @@ class ZarrDataset(Dataset):
     def only_one_discover_item(cls, discovery_items):
         if len(discovery_items) != 1:
             raise ValueError("Zarr dataset should have exactly one discovery item")
-        if not discovery_items[0].get("zarr_store"):
+        if not discovery_items[0].zarr_store:
             raise ValueError(
                 "Zarr dataset should include zarr_store in its discovery item"
             )
