@@ -143,6 +143,23 @@ def get_data_pipeline_arn() -> str:
 
 
 @app.post(
+    "/workflow-executions-airflow",
+    response_model=schemas.BaseResponse,
+    tags=["Workflow-Executions"],
+    status_code=201,
+)
+async def start_workflow_execution(
+    input: Union[schemas.CmrInput, schemas.S3Input] = Body(
+        ..., discriminator="discovery"
+    ),
+) -> schemas.BaseResponse:
+    """
+    Triggers the ingestion workflow
+    """
+    return helpers.trigger_airflow(input)
+
+
+@app.post(
     "/workflow-executions",
     response_model=schemas.BaseResponse,
     tags=["Workflow-Executions"],

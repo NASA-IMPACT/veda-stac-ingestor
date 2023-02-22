@@ -1,10 +1,13 @@
+import base64
 import json
+import os
 from pathlib import Path
 from typing import Dict, Union
 from uuid import uuid4
 
 import boto3
 from pydantic.tools import parse_obj_as
+import requests
 
 try:
     from .schemas import BaseResponse, ExecutionResponse, Status
@@ -12,6 +15,37 @@ except ImportError:
     from schemas import BaseResponse, ExecutionResponse, Status
 
 EXECUTION_NAME_PREFIX = "workflows-api"
+
+
+def trigger_airflow(input: Dict) -> Dict:
+    MWAA_ENV = os.environ["MWAA_ENV"]
+    airflow_client = boto3.client("mwaa")
+    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+
+    mwaa_webserver_hostname = (
+        f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
+    )
+
+    raw_data = f"dags trigger veda_discover --conf '{json.dumps(input)}'"
+    mwaa_response = requests.post(
+        mwaa_webserver_hostname,
+        headers={
+            "Authorization": "Bearer " + mwaa_cli_token["CliToken"],
+            "Content-Type": "application/json",
+        },
+        data=raw_data,
+    )
+    if mwaa_response.status_code not in [200, 201]:
+        raise Exception(
+            f"Failed to trigger airflow: {mwaa_response.status_code} {mwaa_response.text}"
+        )
+    else:
+        return BaseResponse(
+            **{
+                "id": mwaa_response.json()["dag_run_id"],
+                "status": Status.started,
+            }
+        )
 
 
 def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:

@@ -51,6 +51,7 @@ class StacIngestionApi(Stack):
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
+            "MWAA_ENV": config.airflow_env,
         }
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
         db_vpc = ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
