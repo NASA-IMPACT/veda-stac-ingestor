@@ -143,7 +143,7 @@ def get_data_pipeline_arn() -> str:
 
 
 @app.post(
-    "/workflow-executions-airflow",
+    "/workflow-executions",
     response_model=schemas.BaseResponse,
     tags=["Workflow-Executions"],
     status_code=201,
@@ -159,28 +159,10 @@ async def start_workflow_execution(
     return helpers.trigger_airflow(input)
 
 
-@app.post(
-    "/workflow-executions",
-    response_model=schemas.BaseResponse,
-    tags=["Workflow-Executions"],
-    status_code=201,
-)
-async def start_workflow_execution(
-    input: Union[schemas.CmrInput, schemas.S3Input] = Body(
-        ..., discriminator="discovery"
-    ),
-) -> schemas.BaseResponse:
-    """
-    Triggers the ingestion workflow
-    """
-    return helpers.trigger_discover(input, get_data_pipeline_arn())
-
-
 @app.get(
     "/workflow-executions/{workflow_execution_id}",
     response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],
     tags=["Workflow-Executions"],
-    dependencies=[Depends(auth.get_username)],
 )
 async def get_workflow_execution_status(
     workflow_execution_id: str,
@@ -188,7 +170,7 @@ async def get_workflow_execution_status(
     """
     Returns the status of the workflow execution
     """
-    return helpers.get_status(workflow_execution_id, get_data_pipeline_arn())
+    return helpers.get_status(workflow_execution_id)
 
 
 @app.post(
