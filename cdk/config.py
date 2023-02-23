@@ -70,6 +70,10 @@ class Deployment(BaseSettings):
         description="ARN of AWS step function used to trigger data ingestion"
     )
 
+    airflow_env: str = Field(
+        description="Environment of Airflow deployment",
+    )
+
     class Config:
         env_prefix = ""
         case_sentive = False

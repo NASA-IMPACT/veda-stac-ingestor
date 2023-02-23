@@ -1,115 +1,96 @@
-import json
-from pathlib import Path
-from typing import Dict, Union
+import base64
+import os
+from typing import Dict
 from uuid import uuid4
 
 import boto3
-from pydantic.tools import parse_obj_as
+import requests
 
 try:
-    from .schemas import BaseResponse, ExecutionResponse, Status
+    from .schemas import BaseResponse, Status
 except ImportError:
-    from schemas import BaseResponse, ExecutionResponse, Status
+    from schemas import BaseResponse, Status
 
 EXECUTION_NAME_PREFIX = "workflows-api"
 
 
-def trigger_discover(input: Dict, data_pipeline_arn: str) -> Dict:
-    """
-    Trigger a discover event.
-    """
+def trigger_discover(input: Dict) -> Dict:
+    MWAA_ENV = os.environ["MWAA_ENV"]
+    airflow_client = boto3.client("mwaa")
+    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
+
+    mwaa_webserver_hostname = (
+        f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
+    )
+
     unique_key = str(uuid4())
-    client = boto3.client("stepfunctions")
-    client.start_execution(
-        stateMachineArn=data_pipeline_arn,
-        name=f"{EXECUTION_NAME_PREFIX}-{unique_key}",
-        input=input.json(),
+    raw_data = f"dags trigger veda_discover --conf '{input.json()}' -r {unique_key}"
+    mwaa_response = requests.post(
+        mwaa_webserver_hostname,
+        headers={
+            "Authorization": "Bearer " + mwaa_cli_token["CliToken"],
+            "Content-Type": "application/json",
+        },
+        data=raw_data,
     )
-    return BaseResponse(
-        **{
-            "id": unique_key,
-            "status": Status.started,
-        }
-    )
+    if mwaa_response.status_code not in [200, 201]:
+        raise Exception(
+            f"Failed to trigger airflow: {mwaa_response.status_code} {mwaa_response.text}"
+        )
+    else:
+        return BaseResponse(
+            **{
+                "id": unique_key,
+                "status": Status.started,
+            }
+        )
 
 
-def _build_execution_arn(id: str, data_pipeline_arn: str) -> str:
-    """
-    Build the execution arn from an id
-    """
-    arn_prefix = data_pipeline_arn.replace(":stateMachine:", ":execution:")
-    return f"{arn_prefix}:{EXECUTION_NAME_PREFIX}-{id}"
-
-
-def get_status(id: str, data_pipeline_arn: str) -> Dict:
+def get_status(dag_run_id: str) -> Dict:
     """
     Get the status of a workflow execution.
     """
+    MWAA_ENV = os.environ["MWAA_ENV"]
+    airflow_client = boto3.client("mwaa")
+    mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
 
-    def _find_discovery_success_event(events):
-        DISCOVERY_LAMBDA_SUFFIX = "lambda-s3-discovery-fn"
-        # Assumption: All the task events exists in a successful step function execution
-        # Get the discovery scheduled event id
-        discovery_scheduled_id = next(
-            (
-                event["id"]
-                for event in events
-                if (event["type"] == "TaskScheduled")
-                and (
-                    params := json.loads(
-                        event["taskScheduledEventDetails"]["parameters"]
-                    )
-                )
-                and (params.get("FunctionName", "").endswith(DISCOVERY_LAMBDA_SUFFIX))
-            ),
-            None,
-        )
-        # Get the first succeeded event after the discovery scheduled event,
-        # this will be the discovery success event
-        return (
-            next(
-                (
-                    event
-                    for event in events[discovery_scheduled_id - 1 :]
-                    if event["type"] == "TaskSucceeded"
-                ),
-                None,
-            )
-            if discovery_scheduled_id
-            else None
-        )
+    mwaa_webserver_hostname = (
+        f"https://{mwaa_cli_token['WebServerHostname']}/aws_mwaa/cli"
+    )
 
-    client = boto3.client("stepfunctions")
-    execution_arn = _build_execution_arn(id, data_pipeline_arn)
+    raw_data = "dags list-runs -d veda_discover"
+    mwaa_response = requests.post(
+        mwaa_webserver_hostname,
+        headers={
+            "Authorization": "Bearer " + mwaa_cli_token["CliToken"],
+            "Content-Type": "application/json",
+        },
+        data=raw_data,
+    )
+    decoded_response = base64.b64decode(mwaa_response.json()["stdout"]).decode("utf8")
+    rows = decoded_response.split("\n")
+
     try:
-        response = client.describe_execution(executionArn=execution_arn)
-    except (client.exceptions.ExecutionDoesNotExist, client.exceptions.InvalidArn):
-        return BaseResponse(
-            **{
-                "id": id,
-                "status": Status.nonexistent,
-            }
-        )
+        matched_row = next(row for row in rows if dag_run_id in row)
+    except StopIteration:
+        raise Exception(f"Failed to find dag run id: {dag_run_id}")
 
-    status = response["status"]
-    extras = {}
-    if status == "SUCCEEDED":
-        exec_history = client.get_execution_history(executionArn=execution_arn)
-        events = exec_history.get("events")
-        event = _find_discovery_success_event(events)
-        if event:
-            payload = json.loads(event["taskSucceededEventDetails"]["output"])[
-                "Payload"
-            ]
-            files = [Path(obj["s3_filename"]).stem for obj in payload["objects"]]
-            cogify = payload["cogify"]
+    columns = matched_row.split("|")
+    status = columns[2].strip()
 
-            extras = {
-                "discovered_files": files,
-                "message": f"Files queued to {'cogify' if cogify else 'stac-ready'} queue",  # noqa
-            }
+    # Statuses in Airflow differ slightly from our own, so we convert them here
+    if status == "success":
+        run_status = Status.succeeded
+    elif status == "failed":
+        run_status = Status.failed
+    elif status == "running":
+        run_status = Status.started
+    elif status == "queued":
+        run_status = Status.queued
 
-    return parse_obj_as(
-        Union[ExecutionResponse, BaseResponse],
-        {"id": id, "status": Status(status), **extras},
+    return BaseResponse(
+        **{
+            "id": dag_run_id,
+            "status": run_status,
+        }
     )
