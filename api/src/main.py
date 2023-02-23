@@ -156,7 +156,7 @@ async def start_workflow_execution(
     """
     Triggers the ingestion workflow
     """
-    return helpers.trigger_airflow(input)
+    return helpers.trigger_discover(input)
 
 
 @app.get(
