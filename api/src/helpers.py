@@ -84,7 +84,9 @@ def get_status(dag_run_id: str) -> Dict:
         },
         data=raw_data_ingest,
     )
-    decoded_response_ingest = base64.b64decode(mwaa_response_ingest.json()["stdout"]).decode("utf8")
+    decoded_response_ingest = base64.b64decode(
+        mwaa_response_ingest.json()["stdout"]
+    ).decode("utf8")
     rows_ingest = decoded_response_ingest.split("\n")
 
     raw_data_discover = "dags list-runs -d veda_discover"
@@ -96,7 +98,9 @@ def get_status(dag_run_id: str) -> Dict:
         },
         data=raw_data_discover,
     )
-    decoded_response_discover = base64.b64decode(mwaa_response_discover.json()["stdout"]).decode("utf8")
+    decoded_response_discover = base64.b64decode(
+        mwaa_response_discover.json()["stdout"]
+    ).decode("utf8")
     rows_discover = decoded_response_discover.split("\n")
 
     rows = rows_ingest + rows_discover
