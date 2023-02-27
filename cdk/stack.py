@@ -103,8 +103,7 @@ class StacIngestionApi(Stack):
         )
 
         env_secret = self.build_env_secret(config.stage, env)
-        secret_arn:str = env_secret.secret_arn
-
+        secret_arn: str = env_secret.secret_arn
 
         oidc_provider_arn = config.oidc_provider_arn
         oidc_repo_id = config.oidc_repo_id
@@ -115,15 +114,17 @@ class StacIngestionApi(Stack):
             )
             # create IAM role for provider access from specified repo
             # the role should allow a github action in that repo to deploy resources and read a secret
-            oidc_role = iam.Role(self, 
+            oidc_role = iam.Role(
+                self,
                 f"stac-ingestor-oidc-role-{config.stage}",
-                assumed_by=iam.WebIdentityPrincipal(oidc_provider.open_id_connect_provider_arn,
+                assumed_by=iam.WebIdentityPrincipal(
+                    oidc_provider.open_id_connect_provider_arn,
                     conditions={
-                        'StringEquals': {
-                            f'{oidc_provider.open_id_connect_provider_issuer}:sub': f'repo:{oidc_repo_id}'
+                        "StringEquals": {
+                            f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"
                         }
-                    }
-                )
+                    },
+                ),
             )
             oidc_role.add_to_policy(
                 iam.PolicyStatement(
@@ -135,34 +136,30 @@ class StacIngestionApi(Stack):
             get_secret_statement = iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
                 actions=["secretsmanager:GetSecretValue"],
-                resources=[secret_arn]
+                resources=[secret_arn],
             )
-            oidc_policy = iam.Policy(self, 
+            oidc_policy = iam.Policy(
+                self,
                 f"stac-ingestor-oidc-policy-{config.stage}",
                 policy_name=f"stac-ingestor-oidc-policy-{config.stage}",
                 roles=[oidc_role],
-                statements=[
-                    get_secret_statement
-                ]
+                statements=[get_secret_statement],
             )
 
     def build_env_secret(self, stage: str, env_config: dict) -> secretsmanager.ISecret:
         # create secret to store environment variables
         env_secret = secretsmanager.Secret(
             self,
-            f'stac-ingestor-env-secret-{stage}',
-            secret_name=f'stac-ingestor-env-secret-{stage}',
-            description='Contains env vars used for deployment of veda-stac-ingestor',
+            f"stac-ingestor-env-secret-{stage}",
+            secret_name=f"stac-ingestor-env-secret-{stage}",
+            description="Contains env vars used for deployment of veda-stac-ingestor",
             generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template=json.dumps(
-                    env_config
-                ),
+                secret_string_template=json.dumps(env_config),
                 generate_string_key="password",
                 exclude_punctuation=True,
             ),
         )
         return env_secret
-
 
     def build_jwks_url(self, userpool_id: str) -> str:
         region = userpool_id.split("_")[0]
@@ -247,7 +244,7 @@ class StacIngestionApi(Stack):
             )
         )
 
-        if(data_pipeline_arn := env.get("DATA_PIPELINE_ARN")):
+        if data_pipeline_arn := env.get("DATA_PIPELINE_ARN"):
             handler.add_to_role_policy(
                 iam.PolicyStatement(
                     actions=["states:StartExecution"],
@@ -262,7 +259,7 @@ class StacIngestionApi(Stack):
                     ],
                 )
             )
-                
+
         # Allow handler to read DB secret
         db_secret.grant_read(handler)
 

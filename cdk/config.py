@@ -79,8 +79,8 @@ class Deployment(BaseSettings):
     )
 
     oidc_repo_id: str = Field(
-        'NASA-IMPACT/veda-stac-ingestor',
-        description="ID of AWS ECR repository used for OIDC provider (this gets used to define IAM roles for the OIDC provider)"
+        "NASA-IMPACT/veda-stac-ingestor",
+        description="ID of AWS ECR repository used for OIDC provider (this gets used to define IAM roles for the OIDC provider)",
     )
 
     class Config:

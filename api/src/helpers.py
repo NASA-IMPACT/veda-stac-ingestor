@@ -16,7 +16,7 @@ EXECUTION_NAME_PREFIX = "workflows-api"
 
 
 def trigger_discover(input: Dict) -> Dict:
-    if (MWAA_ENV := os.environ["MWAA_ENV"]):
+    if MWAA_ENV := os.environ["MWAA_ENV"]:
         airflow_client = boto3.client("mwaa")
         mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
 
@@ -53,7 +53,7 @@ def get_status(dag_run_id: str) -> Dict:
     """
     Get the status of a workflow execution.
     """
-    if (MWAA_ENV := os.environ["MWAA_ENV"]):
+    if MWAA_ENV := os.environ["MWAA_ENV"]:
         airflow_client = boto3.client("mwaa")
         mwaa_cli_token = airflow_client.create_cli_token(Name=MWAA_ENV)
 
@@ -70,7 +70,9 @@ def get_status(dag_run_id: str) -> Dict:
             },
             data=raw_data,
         )
-        decoded_response = base64.b64decode(mwaa_response.json()["stdout"]).decode("utf8")
+        decoded_response = base64.b64decode(mwaa_response.json()["stdout"]).decode(
+            "utf8"
+        )
         rows = decoded_response.split("\n")
 
         try:
