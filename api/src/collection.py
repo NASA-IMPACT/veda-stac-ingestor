@@ -82,7 +82,7 @@ class Publisher:
             "zarr": {
                 "href": store_path,
                 "title": "Zarr Array Store",
-                "description": "Zarr array store with one or several arrays (data cube variables)",
+                "description": "Zarr array store with one or several arrays (variables)",
                 "roles": ["data", "zarr"],
                 "type": "application/vnd+zarr",
                 "xarray:open_kwargs": {
@@ -151,7 +151,9 @@ class Publisher:
         }
         return collection_stac
 
-    def generate_stac(self, dataset: Union[COGDataset, ZarrDataset], data_type: str) -> dict:
+    def generate_stac(
+        self, dataset: Union[COGDataset, ZarrDataset], data_type: str
+    ) -> dict:
         create_function = self.func_map.get(data_type, self.create_cog_collection)
         return create_function(dataset)
 

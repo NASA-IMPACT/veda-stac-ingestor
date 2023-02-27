@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 from fastapi.exceptions import RequestValidationError
 from pydantic import (
     BaseModel,
-    Extra,
     Field,
     PositiveInt,
     dataclasses,
