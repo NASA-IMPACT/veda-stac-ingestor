@@ -1,6 +1,6 @@
 import os
 from getpass import getuser
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 import requests  # noqa: F401  see comment in validate_dataset()
 from fastapi import Body, Depends, FastAPI, HTTPException
@@ -138,10 +138,6 @@ def delete_collection(collection_id: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=400, detail=(f"{e}"))
-
-
-def get_data_pipeline_arn() -> str:
-    return settings.data_pipeline_arn
 
 
 @app.post(

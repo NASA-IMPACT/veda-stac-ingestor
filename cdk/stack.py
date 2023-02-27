@@ -247,21 +247,22 @@ class StacIngestionApi(Stack):
             )
         )
 
-        data_pipeline_arn = env.get("DATA_PIPELINE_ARN")
-        handler.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["states:StartExecution"],
-                resources=[data_pipeline_arn],
+        if(data_pipeline_arn := env.get("DATA_PIPELINE_ARN")):
+            handler.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["states:StartExecution"],
+                    resources=[data_pipeline_arn],
+                )
             )
-        )
-        handler.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["states:DescribeExecution", "states:GetExecutionHistory"],
-                resources=[
-                    f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"  # noqa
-                ],
+            handler.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["states:DescribeExecution", "states:GetExecutionHistory"],
+                    resources=[
+                        f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"  # noqa
+                    ],
+                )
             )
-        )
+                
         # Allow handler to read DB secret
         db_secret.grant_read(handler)
 
