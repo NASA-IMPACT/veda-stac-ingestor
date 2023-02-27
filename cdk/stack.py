@@ -105,23 +105,32 @@ class StacIngestionApi(Stack):
         env_secret = self.build_env_secret(config.stage, env)
         secret_arn: str = env_secret.secret_arn
 
-        oidc_provider_arn = config.oidc_provider_arn
-        oidc_repo_id = config.oidc_repo_id
+        self.build_oidc(
+            oidc_provider_arn=config.oidc_provider_arn,
+            oidc_repo_id=config.oidc_repo_id,
+            secret_arn=secret_arn,
+            stage=config.stage,
+        )
+
+    def build_oidc(
+        self, oidc_provider_arn: str, oidc_repo_id: str, secret_arn: str, stage: str
+    ):
         if oidc_provider_arn:
             # Create an IAM OIDC provider for the specified provider ARN
             oidc_provider = iam.OpenIdConnectProvider.from_open_id_connect_provider_arn(
                 self, "OIDCProvider", oidc_provider_arn
             )
             # create IAM role for provider access from specified repo
-            # the role should allow a github action in that repo to deploy resources and read a secret
+            # the role should allow a github action in that repo
+            # to deploy resources (TODO) and read a secret
             oidc_role = iam.Role(
                 self,
-                f"stac-ingestor-oidc-role-{config.stage}",
+                f"stac-ingestor-oidc-role-{stage}",
                 assumed_by=iam.WebIdentityPrincipal(
                     oidc_provider.open_id_connect_provider_arn,
                     conditions={
                         "StringEquals": {
-                            f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"
+                            f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"  # noqa E501
                         }
                     },
                 ),
@@ -138,13 +147,15 @@ class StacIngestionApi(Stack):
                 actions=["secretsmanager:GetSecretValue"],
                 resources=[secret_arn],
             )
+
             oidc_policy = iam.Policy(
                 self,
-                f"stac-ingestor-oidc-policy-{config.stage}",
-                policy_name=f"stac-ingestor-oidc-policy-{config.stage}",
+                f"stac-ingestor-oidc-policy-{stage}",
+                policy_name=f"stac-ingestor-oidc-policy-{stage}",
                 roles=[oidc_role],
                 statements=[get_secret_statement],
             )
+            return oidc_role, oidc_policy, oidc_provider
 
     def build_env_secret(self, stage: str, env_config: dict) -> secretsmanager.ISecret:
         # create secret to store environment variables
