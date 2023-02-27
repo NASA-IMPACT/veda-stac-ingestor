@@ -1,10 +1,12 @@
 from getpass import getuser
+from typing import Optional
 
 import aws_cdk
 from pydantic import AnyHttpUrl, BaseSettings, Field, HttpUrl, constr
 
 AwsArn = constr(regex=r"^arn:aws:iam::\d{12}:role/.+")
 AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
+AwsOidcArn = constr(regex=r"^arn:aws:iam::\d{12}:oidc-provider/.+")
 
 
 class Deployment(BaseSettings):
@@ -68,8 +70,17 @@ class Deployment(BaseSettings):
         description="ARN of AWS step function used to trigger data ingestion"
     )
 
-    airflow_env: str = Field(
+    airflow_env: Optional[str] = Field(
         description="Environment of Airflow deployment",
+    )
+
+    oidc_provider_arn: Optional[AwsOidcArn] = Field(
+        description="ARN of AWS OIDC provider used for authentication"
+    )
+
+    oidc_repo_id: str = Field(
+        'NASA-IMPACT/veda-stac-ingestor',
+        description="ID of AWS ECR repository used for OIDC provider (this gets used to define IAM roles for the OIDC provider)"
     )
 
     class Config:
