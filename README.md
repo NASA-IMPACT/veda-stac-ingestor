@@ -43,6 +43,25 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
 Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
 
+## Deployment
+
+### Fetch environment variables using AWS CLI
+
+To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file. 
+> Note: The environment variables stored as AWS secrets are manually maintained and should be reviewed before using.
+
+```
+export AWS_SECRET_ID=stac-ingestor-env-secret-<stage>
+
+aws secretsmanager get-secret-value --secret-id ${AWS_SECRET_ID} --query SecretString --output text | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' > .env
+```
+
+This script is also available at `scripts/sync_env.sh`, which can be invoked with the secret name as an argument:
+
+```
+. scripts/sync_env.sh stac-ingestor-env-secret-<stage>
+```
+
 ## License
 
 This project is licensed under **Apache 2**, see the [LICENSE](LICENSE) file for more details.
