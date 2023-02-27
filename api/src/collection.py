@@ -13,7 +13,6 @@ from pypgstac.db import PgstacDB
 from .schemas import (
     COGDataset,
     DashboardCollection,
-    DatasetUnion,
     SpatioTemporalExtent,
     ZarrDataset,
     DataType,
