@@ -66,7 +66,7 @@ class Deployment(BaseSettings):
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
-    data_pipeline_arn: AwsStepArn = Field(
+    data_pipeline_arn: Optional[AwsStepArn] = Field(
         description="ARN of AWS step function used to trigger data ingestion"
     )
 
