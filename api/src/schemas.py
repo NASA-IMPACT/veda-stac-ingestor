@@ -202,9 +202,7 @@ class S3Input(WorkflowInputBase):
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
-
-    class Config:
-        extra = Extra.allow
+    zarr_store: Optional[str]
 
     @root_validator
     def object_is_accessible(cls, values):
@@ -274,9 +272,6 @@ class COGDataset(Dataset):
     sample_files: List[str]  # unknown how this will work with CMR
     data_type: Literal[DataType.cog]
 
-    class Config:
-        extra = Extra.allow
-
     @root_validator
     def check_sample_files(cls, values):
         if "s3" not in [item.discovery for item in values["discovery_items"]]:
@@ -330,8 +325,3 @@ class ZarrDataset(Dataset):
                 "Zarr dataset should include zarr_store in its discovery item"
             )
         return discovery_items
-
-
-DatasetUnion = Annotated[
-    Union[COGDataset, ZarrDataset], Field(discriminator="data_type")
-]
