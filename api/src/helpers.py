@@ -4,8 +4,8 @@ from typing import Dict
 from uuid import uuid4
 
 import boto3
-from fastapi import HTTPException
 import requests
+from fastapi import HTTPException
 
 try:
     from .schemas import BaseResponse, Status
@@ -36,7 +36,8 @@ def trigger_discover(input: Dict) -> Dict:
         )
         if mwaa_response.status_code not in [200, 201]:
             raise Exception(
-                f"Failed to trigger airflow: {mwaa_response.status_code} {mwaa_response.text}"
+                f"Failed to trigger airflow: {mwaa_response.status_code} "
+                f"{mwaa_response.text}"
             )
         else:
             return BaseResponse(

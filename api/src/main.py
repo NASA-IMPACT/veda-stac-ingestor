@@ -1,6 +1,6 @@
 import os
 from getpass import getuser
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import requests  # noqa: F401  see comment in validate_dataset()
 from fastapi import Body, Depends, FastAPI, HTTPException
