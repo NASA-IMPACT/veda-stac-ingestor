@@ -270,6 +270,14 @@ class StacIngestionApi(Stack):
                     ],
                 )
             )
+            handler.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["airflow:CreateCliToken"],
+                    resources=[
+                        f"arn:aws:airflow:us-west-2:853558080719:environment/{env.get('MWAA_ENV')}"
+                    ],
+                )
+            )
 
         # Allow handler to read DB secret
         db_secret.grant_read(handler)
