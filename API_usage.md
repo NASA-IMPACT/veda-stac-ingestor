@@ -5,14 +5,14 @@ Scientist publish the data to this STAC catalog to make it available to the user
 
 Follow the guide below to publish datasets to the VEDA STAC catalog.
 
-## Prepare the data
+## STEP I: Prepare the data
 
 VEDA supports inclusion of cloud optimized GeoTIFFs (COGs) to its data store.
 
 ### Creating COGs
 
 1. Make sure the projection system is embedded in the COG
-2. Make sure the there's an associated `NoData` value in the COG
+2. Make sure the there's an associated `NoData` value in the COG. Make sure it's not a huge number, -9999 is usually a good number.
 3. Make sure that the COG filename is meaningful and contains the datetime associated with the COG in the following format. All the datetime values in the file should be preceded by the `_` underscore character. Some examples are shown below:
 
 #### Single datetime
@@ -29,14 +29,90 @@ VEDA supports inclusion of cloud optimized GeoTIFFs (COGs) to its data store.
 
 **Note that the date/datetime value is always preceded by an `_` (underscore).**
 
-## Upload to the VEDA data store
+## STEP II: Upload to the VEDA data store
 
 Once you have the COGs, obtain permissions to upload them to the `veda-data-store-staging` bucket.
 
 Upload the data to a sensible location inside the bucket.
-Example: `s3://veda-data-store-staging/<collection-name>/`
+Example: `s3://veda-data-store-staging/`
 
-## Use the VEDA Ingestion API to schedule ingestion/publication of the data
+## STEP III: Create dataset definitions
+
+The next step is to divide all the data into logical collections. A collection is basically what it sounds like, a collection of data files that share the same properties like, the data it's measuring, the periodicity, the spatial region, etc. Examples no2-mean and no2-diff should be two different collections, because one measures the mean and the other the diff. no2-monthly and no2-yearly should be different because the periodicity is different.
+
+One you've logically grouped the datasets into collections, create dataset definitions for each of these collections. The data definition is a json file that contains some metadata of the dataset and information on how to discover these datasets in the s3 bucket. An example is shown below:
+
+```json
+{
+  "collection": "lis-global-da-evap",
+  "title": "Evapotranspiration - LIS 10km Global DA",
+  "description": "Gridded total evapotranspiration (in kg m-2 s-1) from 10km global LIS with assimilation",
+  "license": "CC0-1.0",
+  "is_periodic": true,
+  "time_density": "day",
+  "spatial_extent": {
+    "xmin": -179.95,
+    "ymin": -59.45,
+    "xmax": 179.95,
+    "ymax": 83.55
+  },
+  "temporal_extent": {
+    "startdate": "2002-08-02T00:00:00Z",
+    "enddate": "2021-12-01T00:00:00Z"
+  },
+  "sample_files": [
+    "s3://veda-data-store-staging/EIS/COG/LIS_GLOBAL_DA/Evap/LIS_Evap_200208020000.d01.cog.tif"
+  ],
+  "discovery_items": [
+    {
+      "discovery": "s3",
+      "cogify": false,
+      "upload": false,
+      "dry_run": false,
+      "prefix": "EIS/COG/LIS_GLOBAL_DA/Evap/",
+      "bucket": "veda-data-store-staging",
+      "filename_regex": "(.*)LIS_Evap_(.*).tif$",
+      "datetime_range": "year/month/day"
+    }
+  ]
+}
+```
+
+The following table describes what each of these fields mean:
+
+| field  | description  | allowed value | example
+|---|---|---|---|
+|  collection | the id of the collection  | lowercase letters with optional "-" delimeters  | no2-monthly-avg |
+|  title | a short human readable title for the collection  |  str | Average  NO2 measurements (Monthly) |
+|  description | a detailed description for the dataset | should include what the data is, what sensor was used to measure, where the data was pulled/derived from, etc  |  |
+|  license | license for data use; Default open license: `CC0-1.0`  |  [SPDX license id](https://spdx.org/licenses/) | `CC0-1.0 ` |
+|  is_periodic | is the data periodic? specifies if the data files repeat at a uniform time interval | `true` \| `false`  | `true`
+|  time_density | the time step in which we want to navigate the dataset in the dashboard | `year` \| `month` \| `day` \| `hour` \| `minute` \| `null`  |
+|  spatial_extent | the spatial extent of the collection; a bounding box that includes all the data files in the collection   |   | `{"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90}` |
+|  spatial_extent["xmin"] |  left x coordinate of the spatial extent bounding box  | -180 <= xmin <= 180; xmin < xmax  | 23 |
+|  spatial_extent["ymin"] |  bottom y coordinate of the spatial extent bounding box  | -90 <= ymin <= 90; ymin < ymax  | -40 |
+|  spatial_extent["xmax"] |  right x coordinate of the spatial extent bounding box  | -180 <= xmax <= 180; xmax > xmin  | 150 |
+|  spatial_extent["ymax"] |  top y coordinate of the spatial extent bounding box  | -90 <= ymax <= 90; ymax > ymin  | 40 |
+|  temporal_extent | temporal extent that covers all the data files in the collection  |   | `{"start_date": "2002-08-02T00:00:00Z", "end_date": "2021-12-01T00:00:00Z"}` |
+|  temporal_extent["start_date"] | the `start_date` of the dataset  | iso datetime that ends in `Z`  | `2002-08-02T00:00:00Z` |
+|  temporal_extent["end_date"] | the `end_date` of the dataset  | iso datetime that ends in `Z`  | `2021-12-01T00:00:00Z` |
+|  sample_files | a list of s3 urls for the sample files that go into the collection  |   | `[ "s3://veda-data-store-staging/EIS/COG/LIS_GLOBAL_DA/Evap/LIS_Evap_200208020000.d01.cog.tif", "s3://veda-data-store-staging/EIS/COG/LIS_GLOBAL_DA/Evap/LIS_Evap_200308020000.d01.cog.tif"]` |
+|  discovery_items["discovery"] |  where to discover the data from; currently supported are s3 buckets and cmr | `s3` \| `cmr` | `s3` |
+|  discovery_items["cogify"] |  does the file need to be converted to a cloud optimized geptiff (COG)? `false` if it is already a COG | `true` \| `false`  | `false` |
+|  discovery_items["upload"] | does it need to be uploaded to the veda s3 bucket? `false` if it already exists in `veda-data-store-staging` |  `true` \| `false` | `false` |
+|  discovery_items["dry_run"] | if set to `true`, the items will go through the pipeline, but won't actually publish to the stac catalog; useful for testing purposes | `true` \| `false`  | `false` |
+|  discovery_items["bucket"] | the s3 bucket where the data is uploaded to | any bucket that the data pipelines has access to | `veda-data-store-staging` \| `climatedashboard-data` \| `{any-public-bucket}` | `veda-data-store-staging` |
+|  discovery_items["prefix"]| within the s3 bucket, the prefix or path to the "folder" where the data files exist | any valid path winthin the bucket  | `EIS/COG/LIS_GLOBAL_DA/Evap/` |
+|  discovery_items["filename_regex"] |  a common filename pattern that all the files in the collection follow | a valid regex expression  | `(.*)LIS_Evap_(.*).cog.tif$` |
+|  discovery_items["datetime_range"] | based on the naming convention in [STEP I](#STEP I: Prepare the data), the datetime range to be extracted from the filename |  `year` \| `month` \| `day` | `year` |
+
+The steps after this are technical, so at this point the scientists can send the json to the VEDA POC and they'll handle the publication process. The publication process involves 3 steps:
+
+1. [VEDA] Publishing to the development STAC catalog `https://dev-stac.delta-backend.com`
+2. [EIS] Reviewing the collection/items published to the dev STAC catalog
+3. [VEDA] Publishing to the staging STAC catalog `https://staging-stac.delta-backend.com`
+
+## STEP IV: Use the VEDA Ingestion API to schedule ingestion/publication of the data
 
 ### 1. Obtain credentials from a VEDA team member
 
@@ -45,7 +121,7 @@ Ask a VEDA team member to create credentials (username and password) for VEDA au
 ### 2. Export username and password
 
 ```bash
-export username="slesa"
+export username="johndoe"
 export password="xxxx"
 ```
 
@@ -64,7 +140,7 @@ password = os.environ.get("password")
 
 # base url for the workflows api
 # experimental / subject to change in the future
-base_url = "https://069xiins3b.execute-api.us-west-2.amazonaws.com/dev"
+base_url = "https://dev-api.delta-backend.com"
 
 # endpoint to get the token from
 token_url = f"{base_url}/token"
@@ -78,143 +154,48 @@ body = {
 # request token
 response = requests.post(token_url, data=body)
 if not response.ok:
-    print("something went wrong")
-
-# get token from response
-token = response.json().get("AccessToken")
-
-# prepare headers for requests
-headers = {
-    "Authorization": f"Bearer {token}"
-}
-
+    raise Exception("Couldn't obtain the token. Make sure the username and password are correct.")
+else:
+    # get token from response
+    token = response.json().get("AccessToken")
+    # prepare headers for requests
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
 ```
 
-#### Ingest the collection
+#### Ingest the dataset
 
-You'll first need to create a collection for your dataset.
-Before you can do that, you'll need metadata about the collection like the spatial and temporal extent, license, etc. See the `body` in the code snippet below.
-
-Then, use the code snippet below to publish the collection.
+Then, use the code snippet below to publish the dataset.
 
 ```python
-# url for collection ingestion
-collection_ingestion_url = f"{base_url}/collections"
+# url for dataset validation / publication
+validate_url = f"{base_url}/dataset/validate"
+
+publish_url = f"{base_url}/dataset/publish"
 
 # prepare the body of the request,
-# for a collection, it is a valid STAC record for the collection
+body = json.load(open("dataset-definition.json"))
 
-body = {
-    "id": "demo-social-vulnerability-index-overall",
-    "type": "Collection",
-    "title": "(Demo) Social Vulnerability Index (Overall)",
-    "description": "Overall Social Vulnerability Index - Percentile ranking",
-    "stac_version": "1.0.0",
-    "license": "MIT",
-    "links": [],
-    "extent": {
-        "spatial": {
-            "bbox": [
-                [
-                    -178.23333334,
-                    18.908332897999998,
-                    -66.958333785,
-                    71.383332688
-                ]
-            ]
-        },
-        "temporal": {
-            "interval": [
-                [
-                    "2000-01-01T00:00:00Z",
-                    "2018-01-01T00:00:00Z"
-                ]
-            ]
-        }
-    },
-    "dashboard:is_periodic": False,
-    "dashboard:time_density": "year",
-    "item_assets": {
-        "cog_default": {
-            "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-            "roles": [
-                "data",
-                "layer"
-            ],
-            "title": "Default COG Layer",
-            "description": "Cloud optimized default layer to display on map"
-        }
-    }
-}
-
-# make the requests with the body and headers
-response = requests.post(
-    collection_ingestion_url,
+# Validate the data definition using the /validate endpoint
+validation_response = requests.post(
+    validate_url,
     headers=headers,
     json=body
 )
 
 # look at the response
-if response.ok:
-    print(response.json())
-else:
-    print("Error")
-```
+validation_response.raise_for_status()
 
-#### Ingest items to a collection
-
-Make sure that the respective collection is already published using the instructions above.
-Now you're ready to ingest the items to that collection.
-
-Follow the example below to ingest items to a collection:
-
-```python
-# url for workflow execution
-workflow_execution_url = f"{base_url}/workflow-executions"
-
-# prepare the body of the request
-body = {
-    "collection": "EPA-annual-emissions_1A_Combustion_Mobile",
-    "prefix": "EIS/cog/EPA-inventory-2012/annual/",
-    "bucket": "veda-data-store-staging",
-    "filename_regex": "^(.*)Combustion_Mobile.tif$",
-    "discovery": "s3",
-    "upload": False,
-    "start_datetime": "2012-01-01T00:00:00Z",
-    "end_datetime": "2012-12-31T23:59:59Z",
-    "cogify": False,
-}
-
-# make the requests with the body and headers
-response = requests.post(
-    workflow_execution_url,
+# If the validation is successful, publish the dataset using /publish endpoint
+publish_response = requests.post(
+    publish_url,
     headers=headers,
     json=body
 )
 
-# look at the response
-if response.ok:
-    print(response.json())
-else:
-    print("Error")
+if publish_response.ok:
+    print("Success")
 ```
 
-#### Check the status of the execution
-
-```python
-# the id of the execution
-# should be available in the response of workflow execution request
-execution_id = "xxx"
-
-# url for execution status
-execution_status_url = f"{workflow_execution_url}/{execution_id}"
-
-# make the request
-response = requests.get(
-    execution_status_url,
-    headers=headers,
-)
-
-if response.ok:
-    print(response.json())
-```
+#### TODO: Check the status of the execution
