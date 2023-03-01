@@ -29,6 +29,8 @@ settings = (
 )
 app = FastAPI(root_path=settings.root_path)
 
+publisher = collection_loader.Publisher()
+
 
 @app.get(
     "/ingestions", response_model=schemas.ListIngestionResponse, tags=["Ingestion"]
@@ -115,7 +117,7 @@ def cancel_ingestion(
 def publish_collection(collection: schemas.DashboardCollection):
     # pgstac create collection
     try:
-        collection_loader.ingest(collection)
+        publisher.ingest(collection)
         return {f"Successfully published: {collection.id}"}
     except Exception as e:
         raise HTTPException(
@@ -131,7 +133,7 @@ def publish_collection(collection: schemas.DashboardCollection):
 )
 def delete_collection(collection_id: str):
     try:
-        collection_loader.delete(collection_id=collection_id)
+        publisher.delete(collection_id=collection_id)
         return {f"Successfully deleted: {collection_id}"}
     except Exception as e:
         print(e)
@@ -197,7 +199,7 @@ async def get_token(
     tags=["Dataset"],
     dependencies=[Depends(auth.get_username)],
 )
-def validate_dataset(dataset: schemas.Dataset):
+def validate_dataset(dataset: schemas.COGDataset):
     # for all sample files in dataset, test access using raster /validate endpoint
     for sample in dataset.sample_files:
         url = f"{settings.raster_url}/cog/validate?url={sample}"
@@ -221,58 +223,27 @@ def validate_dataset(dataset: schemas.Dataset):
 @app.post(
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
-async def publish_dataset(dataset: schemas.Dataset):
+async def publish_dataset(
+    dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
+        ..., discriminator="data_type"
+    )
+):
     # Construct and load collection
-    collection_data = {
-        "id": dataset.collection,
-        "title": dataset.title,
-        "description": dataset.description,
-        "license": dataset.license,
-        "extent": schemas.DatetimeExtent.parse_obj(
-            {
-                "spatial": {
-                    "bbox": [
-                        list(dataset.spatial_extent.dict(exclude_unset=True).values())
-                    ]
-                },
-                "temporal": {
-                    "interval": [
-                        # most of our data uses the Z suffix for UTC - isoformat() doesn't
-                        [
-                            x.isoformat().replace("+00:00", "Z")
-                            for x in list(
-                                dataset.temporal_extent.dict(
-                                    exclude_unset=True
-                                ).values()
-                            )
-                        ]
-                    ]
-                },
-            }
-        ),
-        "item_assets": {
-            "cog_default": {
-                "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-                "roles": ["data", "layer"],
-                "title": "Default COG Layer",
-                "description": "Cloud optimized default layer to display on map",
-            }
-        },
-        "links": [],
-        "type": "Collection",
-        "dashboard:time_density": dataset.time_density,
-        "dashboard:is_periodic": dataset.is_periodic,
-    }
+    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
     collection = schemas.DashboardCollection.parse_obj(collection_data)
-    publish_collection(collection)
+    publisher.ingest(collection)
 
-    for discovery in dataset.discovery_items:
-        discovery.collection = dataset.collection
-        await start_workflow_execution(discovery)
-    return {
-        f"Successfully published dataset: {dataset.collection}\n\
-            Initiated workflows for {len(dataset.discovery_items)} items."
-    }
+    return_dict = {"message": f"Successfully published dataset: {dataset.collection}"}
+
+    if dataset.data_type == schemas.DataType.cog:
+        for discovery in dataset.discovery_items:
+            discovery.collection = dataset.collection
+            await start_workflow_execution(discovery)
+            return_dict[
+                "message"
+            ] += f"Initiated workflows for {len(dataset.discovery_items)} items."
+
+    return return_dict
 
 
 @app.get("/auth/me")

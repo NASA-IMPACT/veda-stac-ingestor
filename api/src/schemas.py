@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 from fastapi.exceptions import RequestValidationError
 from pydantic import (
     BaseModel,
-    Extra,
     Field,
     PositiveInt,
     dataclasses,
@@ -23,7 +22,7 @@ from stac_pydantic import Collection, Item, shared
 from typing_extensions import Annotated
 
 from . import validators
-from .schema_helpers import BboxExtent, DatetimeExtent, TemporalExtent
+from .schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -58,8 +57,10 @@ class AccessibleItem(Item):
 class DashboardCollection(Collection):
     is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
     time_density: Optional[str] = Field(..., alias="dashboard:time_density")
+    item_assets: Optional[Dict]
+    assets: Optional[Dict]
+    extent: SpatioTemporalExtent
     item_assets: Dict
-    extent: DatetimeExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
@@ -71,7 +72,7 @@ class DashboardCollection(Collection):
     def time_density_is_valid(cls, time_density):
         if not time_density and time_density not in ["day", "month", "year", None]:
             raise ValueError(
-                "If set, time_density must be either 'day, 'month' or 'year'"
+                "If set, time_density must be one of 'day, 'month' or 'year'"
             )
         return time_density
 
@@ -200,11 +201,16 @@ class S3Input(WorkflowInputBase):
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
+    zarr_store: Optional[str]
 
     @root_validator
-    def is_accessible(cls, values):
-        bucket, prefix = values.get("bucket"), values.get("prefix")
-        validators.s3_bucket_object_is_accessible(bucket=bucket, prefix=prefix)
+    def object_is_accessible(cls, values):
+        bucket = values.get("bucket")
+        prefix = values.get("prefix")
+        zarr_store = values.get("zarr_store")
+        validators.s3_bucket_object_is_accessible(
+            bucket=bucket, prefix=prefix, zarr_store=zarr_store
+        )
         return values
 
 
@@ -227,13 +233,16 @@ class Dataset(BaseModel):
     license: str
     is_periodic: bool
     time_density: Optional[str]
-    spatial_extent: BboxExtent
-    temporal_extent: TemporalExtent
-    sample_files: List[str]  # unknown how this will work with CMR
     discovery_items: List[ItemUnion]
 
-    class Config:
-        extra = Extra.allow
+    # collection id must be all lowercase, with optional - delimiter
+    @validator("collection")
+    def check_id(cls, collection):
+        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
+            raise ValueError(
+                "Invalid id - id must be all lowercase, with optional '-' delimiters"
+            )
+        return collection
 
     @root_validator
     def check_time_density(cls, values):
@@ -250,14 +259,17 @@ class Dataset(BaseModel):
             raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
-    # collection id must be all lowercase, with optional - delimiter
-    @validator("collection")
-    def check_id(cls, collection):
-        if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
-            raise ValueError(
-                "Invalid id - id must be all lowercase, with optional '-' delimiters"
-            )
-        return collection
+
+class DataType(str, enum.Enum):
+    cog = "cog"
+    zarr = "zarr"
+
+
+class COGDataset(Dataset):
+    spatial_extent: BboxExtent
+    temporal_extent: TemporalExtent
+    sample_files: List[str]  # unknown how this will work with CMR
+    data_type: Literal[DataType.cog]
 
     @root_validator
     def check_sample_files(cls, values):
@@ -268,10 +280,12 @@ class Dataset(BaseModel):
         for fname in values["sample_files"]:
             found_match = False
             for item in values["discovery_items"]:
-                if (
-                    item.discovery == "s3"
-                    and re.search(item.filename_regex, fname.split("/")[-1])
-                    and "/".join(fname.split("/")[3:]).startswith(item.prefix)
+                if all(
+                    [
+                        item.discovery == "s3",
+                        re.search(item.filename_regex, fname.split("/")[-1]),
+                        "/".join(fname.split("/")[3:]).startswith(item.prefix),
+                    ]
                 ):
                     if item.datetime_range:
                         try:
@@ -291,3 +305,22 @@ class Dataset(BaseModel):
                 "of the provided prefix/filename_regex combinations."
             )
         return values
+
+
+class ZarrDataset(Dataset):
+    xarray_kwargs: Optional[Dict] = dict()
+    x_dimension: Optional[str]
+    y_dimension: Optional[str]
+    temporal_dimension: Optional[str]
+    reference_system: Optional[int]
+    data_type: Literal[DataType.zarr]
+
+    @validator("discovery_items")
+    def only_one_discover_item(cls, discovery_items):
+        if len(discovery_items) != 1:
+            raise ValueError("Zarr dataset should have exactly one discovery item")
+        if not discovery_items[0].zarr_store:
+            raise ValueError(
+                "Zarr dataset should include zarr_store in its discovery item"
+            )
+        return discovery_items
