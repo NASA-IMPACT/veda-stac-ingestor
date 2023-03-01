@@ -58,9 +58,7 @@ class Deployment(BaseSettings):
         description="URL of STAC API",
     )
 
-    raster_url: AnyHttpUrl = Field(
-        description="URL of Raster API"
-    )
+    raster_url: AnyHttpUrl = Field(description="URL of Raster API")
 
     data_access_role: AwsArn = Field(
         description="ARN of AWS Role used to validate access to S3 data"
