@@ -11,9 +11,35 @@ VEDA supports inclusion of cloud optimized GeoTIFFs (COGs) to its data store.
 
 ### Creating COGs
 
-1. Make sure the projection system is embedded in the COG
-2. Make sure the there's an associated `NoData` value in the COG. Make sure it's not a huge number, -9999 is usually a good number.
-3. Make sure that the COG filename is meaningful and contains the datetime associated with the COG in the following format. All the datetime values in the file should be preceded by the `_` underscore character. Some examples are shown below:
+A command-line tool for creating and validating COGs is [`rio-cogeo`](https://cogeotiff.github.io/rio-cogeo/). The docs have a [guide on preparing COGs](https://cogeotiff.github.io/rio-cogeo/Is_it_a_COG/), too.
+
+1. If your raster contains empty pixels, make sure the `NoData` value is set correctly (check with `rio cogeo info`). The `NoData` value needs to be set **before cloud-optimizing the raster**, so overviews are computed from real data pixels only. Pro-tip: For floating-point rasters, using `NaN` for flagging nodata helps avoid roundoff errors later on.
+
+   You can set the nodata flag on a GeoTIFF **in-place** with:
+
+   ```bash
+   rio edit_info --nodata 255 /path/to/file.tif
+   ```
+
+   or in Python with
+
+   ```python
+   import rasterio
+   
+   with rasterio.open("/path/to/file.tif", "r+") as ds:
+       ds.nodata = 255
+   ```
+
+   Note that this only changes the flag. If you want to change the actual value you have in the data, you need to create a new copy of the file where you change the pixel values.
+  
+2. Make sure the projection system is embedded in the COG (check with `rio cogeo info`)
+3. When creating the COG, use the right `resampling` method for overviews, for example `average` for continuous / floating point data and `mode` for categorical / integer.
+
+    ```bash
+    rio cogeo create --overview-resampling "mode" /path/to/input.tif /path/to/output.tif
+    ```
+
+4. Make sure that the COG filename is meaningful and contains the datetime associated with the COG in the following format. All the datetime values in the file should be preceded by the `_` underscore character. Some examples are shown below:
 
 #### Single datetime
 
