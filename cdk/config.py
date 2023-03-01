@@ -58,8 +58,8 @@ class Deployment(BaseSettings):
         description="URL of STAC API",
     )
 
-    jwks_url: AnyHttpUrl = Field(
-        description="URL of JWKS, e.g. https://cognito-idp.{region}.amazonaws.com/{userpool_id}/.well-known/jwks.json"  # noqa
+    raster_url: AnyHttpUrl = Field(
+        description="URL of Raster API"
     )
 
     data_access_role: AwsArn = Field(
