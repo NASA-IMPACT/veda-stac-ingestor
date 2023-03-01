@@ -51,6 +51,7 @@ class StacIngestionApi(Stack):
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
+            "RASTER_URL": config.raster_url
         }
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
         db_vpc = ec2.Vpc.from_lookup(self, "vpc", vpc_id=config.stac_db_vpc_id)
@@ -162,7 +163,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,
@@ -228,7 +229,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,
