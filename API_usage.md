@@ -106,6 +106,7 @@ One you've logically grouped the datasets into collectionss, create dataset defi
 }
 ```
 
+### Field description
 The following table describes what each of these fields mean:
 
 | field  | description  | allowed value | example
