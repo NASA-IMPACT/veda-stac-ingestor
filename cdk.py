@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 
-# import aws_cdk as cdk
+import aws_cdk as cdk
 from aws_cdk import App
 
 from cdk import config, stack
@@ -38,7 +38,7 @@ stack.StacIngestionApi(
     env=deployment.env,
 )
 
-# for key, value in tags.items():
-#     cdk.Tags.of(stack).add(key, value)
+for key, value in tags.items():
+    cdk.Tags.of(app).add(key, value)
 
 app.synth()
