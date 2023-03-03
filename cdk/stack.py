@@ -134,7 +134,7 @@ class StacIngestionApi(Stack):
                 oidc_provider.open_id_connect_provider_arn,
                 conditions={
                     "StringEquals": {
-                        f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"  # noqa E501
+                        f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"
                     }
                 },
             ),
@@ -269,7 +269,7 @@ class StacIngestionApi(Stack):
                 iam.PolicyStatement(
                     actions=["states:DescribeExecution", "states:GetExecutionHistory"],
                     resources=[
-                        f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"  # noqa
+                        f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"
                     ],
                 )
             )
@@ -277,7 +277,7 @@ class StacIngestionApi(Stack):
                 iam.PolicyStatement(
                     actions=["airflow:CreateCliToken"],
                     resources=[
-                        f"arn:aws:airflow:us-west-2:853558080719:environment/{env.get('MWAA_ENV')}"
+                        f"arn:aws:airflow:{self.region}:{self.account}:environment/{env.get('MWAA_ENV')}"
                     ],
                 )
             )
