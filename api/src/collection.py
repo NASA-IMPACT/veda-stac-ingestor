@@ -60,6 +60,13 @@ class Publisher:
             DataType.cog: self.create_cog_collection,
         }
 
+    def _clean_up(self, collection_formatted):
+        if time_density := collection_formatted.get("dashboard:time_density"):
+            collection_formatted["dashboard:time_density"] = None if time_density == 'None' else time_density
+        if is_periodic := collection_formatted.get("dashboard:is_periodic"):
+            collection_formatted["dashboard:is_periodic"] = eval(is_periodic)
+        return collection_formatted
+
     def get_template(self, dataset: Union[ZarrDataset, COGDataset]) -> dict:
         format_args = {
             "collection": dataset.collection,
@@ -74,6 +81,7 @@ class Publisher:
             key: value.format(**format_args) if type(value) == str else value
             for key, value in collection_json.items()
         }
+        collection_formatted = self._clean_up(collection_formatted)
         return collection_formatted
 
     def _create_zarr_template(self, dataset: ZarrDataset, store_path: str) -> dict:
