@@ -31,7 +31,10 @@ def s3_object_is_accessible(bucket: str, key: str):
     """
     client = boto3.client("s3", **get_s3_credentials())
     try:
-        client.head_object(Bucket=bucket, Key=key)
+        try:
+            client.head_object(Bucket=bucket, Key=key)
+        except:
+            client.head_object(Bucket=bucket, Key=key, requester_pays=True)
     except client.exceptions.ClientError as e:
         raise ValueError(
             f"Asset not accessible: {e.__dict__['response']['Error']['Message']}"
