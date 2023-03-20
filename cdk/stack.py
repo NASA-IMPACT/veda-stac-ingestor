@@ -41,6 +41,23 @@ class StacIngestionApi(Stack):
             self, "cognito-user-pool", config.userpool_id
         )
 
+        # subset of env needed for lambdas
+        # TODO we may be able to further refine these for our 2 lambdas
+        lambda_env_keys = [
+            "DYNAMODB_TABLE",
+            "JWKS_URL",
+            "ROOT_PATH",
+            "NO_PYDANTIC_SSM_SETTINGS",
+            "STAC_URL",
+            "DATA_ACCESS_ROLE",
+            "DATA_PIPELINE_ARN",
+            "USERPOOL_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "MWAA_ENV",
+            "RASTER_URL",
+        ]
+
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
@@ -65,11 +82,11 @@ class StacIngestionApi(Stack):
             security_group_id=config.stac_db_security_group_id,
         )
 
-        api_env = env  # TODO division of env vars between api and ingestor
+        lambda_env = {k: env.get(k, None) for k in lambda_env_keys}
 
         handler = self.build_api_lambda(
             table=table,
-            env=api_env,
+            env=lambda_env,
             data_access_role=data_access_role,
             user_pool=user_pool,
             stage=config.stage,
@@ -84,11 +101,9 @@ class StacIngestionApi(Stack):
             stage=config.stage,
         )
 
-        ingestor_env = env  # TODO division of env vars between api and ingestor
-
         self.build_ingestor(
             table=table,
-            env=ingestor_env,
+            env=lambda_env,
             db_secret=db_secret,
             db_vpc=db_vpc,
             db_security_group=db_security_group,
