@@ -229,7 +229,9 @@ async def publish_dataset(
     collection = schemas.DashboardCollection.parse_obj(collection_data)
     publisher.ingest(collection)
 
-    return_dict = {"message": f"Successfully published collection: {dataset.collection}."}
+    return_dict = {
+        "message": f"Successfully published collection: {dataset.collection}."
+    }
 
     if dataset.data_type == schemas.DataType.cog:
         workflow_runs = []
