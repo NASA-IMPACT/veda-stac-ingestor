@@ -62,7 +62,9 @@ class Publisher:
 
     def _clean_up(self, collection_formatted):
         if time_density := collection_formatted.get("dashboard:time_density"):
-            collection_formatted["dashboard:time_density"] = None if time_density == 'None' else time_density
+            collection_formatted["dashboard:time_density"] = (
+                None if time_density == "None" else time_density
+            )
         if is_periodic := collection_formatted.get("dashboard:is_periodic"):
             collection_formatted["dashboard:is_periodic"] = eval(is_periodic)
         return collection_formatted

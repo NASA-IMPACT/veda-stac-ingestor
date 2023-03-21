@@ -70,7 +70,7 @@ class DashboardCollection(Collection):
     # Literal[str, None] doesn't quite work for null field inputs from a dict()
     @validator("time_density")
     def time_density_is_valid(cls, time_density):
-        if not time_density and time_density not in ["day", "month", "year", None]:
+        if time_density and time_density not in ["day", "month", "year"]:
             raise ValueError(
                 "If set, time_density must be one of 'day, 'month' or 'year'"
             )
@@ -273,13 +273,19 @@ class COGDataset(Dataset):
 
     @root_validator
     def check_sample_files(cls, values):
-        if "s3" not in [item.discovery for item in values["discovery_items"]]:
+        # pydantic doesn't stop at the first validation,
+        # if the validation for s3 item access fails, "discovery_items" isn't returned
+        # this avoids throwing a KeyError
+        if not (discovery_items := values.get("discovery_items")):
+            return
+
+        if "s3" not in [item.discovery for item in discovery_items]:
             return values
         # TODO cmr handling/validation
         invalid_fnames = []
         for fname in values["sample_files"]:
             found_match = False
-            for item in values["discovery_items"]:
+            for item in discovery_items:
                 if all(
                     [
                         item.discovery == "s3",

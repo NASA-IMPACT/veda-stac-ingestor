@@ -40,9 +40,7 @@ def s3_object_is_accessible(bucket: str, key: str):
 
 @functools.lru_cache
 def s3_bucket_object_is_accessible(
-    bucket: str,
-    prefix: str,
-    zarr_store: Union[str, None] = None
+    bucket: str, prefix: str, zarr_store: Union[str, None] = None
 ):
     """
     Ensure we can send HEAD requests to S3 objects in bucket.
@@ -51,13 +49,11 @@ def s3_bucket_object_is_accessible(
     prefix = f"{prefix}{zarr_store}" if zarr_store else prefix
     try:
         result = client.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=2)
-        # print(result)
     except client.exceptions.NoSuchBucket:
         raise ValueError("Bucket doesn't exist.")
     except client.exceptions.ClientError as e:
         raise ValueError(f"Access denied: {e.__dict__['response']['Error']['Message']}")
     content = result.get("Contents", [])
-    # if the prefix exists, but no items exist, the content still has one element
     if len(content) < 1:
         raise ValueError("No data in bucket/prefix.")
     try:
