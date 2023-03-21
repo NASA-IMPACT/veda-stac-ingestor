@@ -50,7 +50,6 @@ class StacIngestionApi(Stack):
             "NO_PYDANTIC_SSM_SETTINGS",
             "STAC_URL",
             "DATA_ACCESS_ROLE",
-            "DATA_PIPELINE_ARN",
             "USERPOOL_ID",
             "CLIENT_ID",
             "CLIENT_SECRET",
@@ -65,7 +64,6 @@ class StacIngestionApi(Stack):
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
-            "DATA_PIPELINE_ARN": config.data_pipeline_arn,
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
@@ -273,26 +271,12 @@ class StacIngestionApi(Stack):
             )
         )
 
-        if data_pipeline_arn := env.get("DATA_PIPELINE_ARN"):
-            handler.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["states:StartExecution"],
-                    resources=[data_pipeline_arn],
-                )
-            )
-            handler.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["states:DescribeExecution", "states:GetExecutionHistory"],
-                    resources=[
-                        f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"
-                    ],
-                )
-            )
+        if mwaa_env := env.get("MWAA_ENV"):
             handler.add_to_role_policy(
                 iam.PolicyStatement(
                     actions=["airflow:CreateCliToken"],
                     resources=[
-                        f"arn:aws:airflow:{self.region}:{self.account}:environment/{env.get('MWAA_ENV')}"
+                        f"arn:aws:airflow:{self.region}:{self.account}:environment/{mwaa_env}"
                     ],
                 )
             )
