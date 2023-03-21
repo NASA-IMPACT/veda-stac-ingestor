@@ -41,6 +41,22 @@ class StacIngestionApi(Stack):
             self, "cognito-user-pool", config.userpool_id
         )
 
+        # subset of env needed for lambdas
+        # TODO we may be able to further refine these for our 2 lambdas
+        lambda_env_keys = [
+            "DYNAMODB_TABLE",
+            "JWKS_URL",
+            "ROOT_PATH",
+            "NO_PYDANTIC_SSM_SETTINGS",
+            "STAC_URL",
+            "DATA_ACCESS_ROLE",
+            "USERPOOL_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "MWAA_ENV",
+            "RASTER_URL",
+        ]
+
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
@@ -48,7 +64,6 @@ class StacIngestionApi(Stack):
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": data_access_role.role_arn,
-            "DATA_PIPELINE_ARN": config.data_pipeline_arn,
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
@@ -65,11 +80,11 @@ class StacIngestionApi(Stack):
             security_group_id=config.stac_db_security_group_id,
         )
 
-        api_env = env  # TODO division of env vars between api and ingestor
+        lambda_env = {k: env.get(k, None) for k in lambda_env_keys}
 
         handler = self.build_api_lambda(
             table=table,
-            env=api_env,
+            env=lambda_env,
             data_access_role=data_access_role,
             user_pool=user_pool,
             stage=config.stage,
@@ -84,11 +99,9 @@ class StacIngestionApi(Stack):
             stage=config.stage,
         )
 
-        ingestor_env = env  # TODO division of env vars between api and ingestor
-
         self.build_ingestor(
             table=table,
-            env=ingestor_env,
+            env=lambda_env,
             db_secret=db_secret,
             db_vpc=db_vpc,
             db_security_group=db_security_group,
@@ -258,26 +271,12 @@ class StacIngestionApi(Stack):
             )
         )
 
-        if data_pipeline_arn := env.get("DATA_PIPELINE_ARN"):
-            handler.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["states:StartExecution"],
-                    resources=[data_pipeline_arn],
-                )
-            )
-            handler.add_to_role_policy(
-                iam.PolicyStatement(
-                    actions=["states:DescribeExecution", "states:GetExecutionHistory"],
-                    resources=[
-                        f"{env.get('DATA_PIPELINE_ARN').replace(':stateMachine:', ':execution:')}*"
-                    ],
-                )
-            )
+        if mwaa_env := env.get("MWAA_ENV"):
             handler.add_to_role_policy(
                 iam.PolicyStatement(
                     actions=["airflow:CreateCliToken"],
                     resources=[
-                        f"arn:aws:airflow:{self.region}:{self.account}:environment/{env.get('MWAA_ENV')}"
+                        f"arn:aws:airflow:{self.region}:{self.account}:environment/{mwaa_env}"
                     ],
                 )
             )

@@ -14,7 +14,7 @@ except ImportError:
 
 
 def trigger_discover(input: Dict) -> Dict:
-    if not (MWAA_ENV := os.environ["MWAA_ENV"]):
+    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")
@@ -52,7 +52,7 @@ def get_status(dag_run_id: str) -> Dict:
     """
     Get the status of a workflow execution.
     """
-    if not (MWAA_ENV := os.environ["MWAA_ENV"]):
+    if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
         raise HTTPException(status_code=400, detail="MWAA environment not set")
 
     airflow_client = boto3.client("mwaa")

@@ -66,12 +66,17 @@ class Deployment(BaseSettings):
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
-    data_pipeline_arn: Optional[AwsStepArn] = Field(
-        description="ARN of AWS step function used to trigger data ingestion"
-    )
-
     airflow_env: Optional[str] = Field(
         description="Environment of Airflow deployment",
+    )
+
+    oidc_provider_arn: Optional[AwsOidcArn] = Field(
+        description="ARN of AWS OIDC provider used for authentication"
+    )
+
+    oidc_repo_id: str = Field(
+        "NASA-IMPACT/veda-stac-ingestor",
+        description="ID of AWS ECR repository used for OIDC provider",
     )
 
     oidc_provider_arn: Optional[AwsOidcArn] = Field(
