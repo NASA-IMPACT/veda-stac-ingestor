@@ -60,7 +60,6 @@ class DashboardCollection(Collection):
     item_assets: Optional[Dict]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
-    item_assets: Dict
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
