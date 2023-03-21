@@ -25,10 +25,6 @@ class Settings(BaseSettings):
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
-    data_pipeline_arn: Optional[AwsStepArn] = Field(
-        description="ARN of AWS step function used to trigger data ingestion"
-    )
-
     userpool_id: str = Field(description="The Cognito Userpool used for authentication")
 
     client_id: str = Field(description="The Cognito APP client ID")
