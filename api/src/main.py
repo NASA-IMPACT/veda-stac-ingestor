@@ -2,7 +2,7 @@ import os
 from getpass import getuser
 from typing import Dict, Union
 
-import requests  # noqa: F401  see comment in validate_dataset()
+import requests
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
