@@ -61,6 +61,9 @@ class DashboardCollection(Collection):
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
 
+    class Config:
+        allow_population_by_field_name = True
+
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
         validators.cog_default_exists(item_assets)
@@ -232,6 +235,7 @@ class Dataset(BaseModel):
     license: str
     is_periodic: bool
     time_density: Optional[str]
+    links: Optional[list[Dict]] = []
     discovery_items: List[ItemUnion]
 
     # collection id must be all lowercase, with optional - delimiter
