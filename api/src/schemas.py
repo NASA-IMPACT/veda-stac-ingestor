@@ -272,9 +272,10 @@ class COGDataset(Dataset):
 
         if "s3" not in [item.discovery for item in discovery_items]:
             return values
+
         # TODO cmr handling/validation
         invalid_fnames = []
-        for fname in values["sample_files"]:
+        for fname in values.get("sample_files", []):
             found_match = False
             for item in discovery_items:
                 if all(
