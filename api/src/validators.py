@@ -86,6 +86,18 @@ def cog_default_exists(item_assets: Dict):
         raise ValueError("Collection doesn't have a default cog placeholder")
 
 
+def time_density_is_valid(is_periodic: bool, time_density: Union[str, None]):
+    """
+    Ensures that the time_density is valid based on the value of is_periodic
+    """
+    if is_periodic and not time_density:
+        raise ValueError("If is_periodic is true, time_density must be set.")
+
+    # Literal[str, None] doesn't quite work for null field inputs from a dict()
+    if time_density and time_density not in ["day", "month", "year"]:
+        raise ValueError("If set, time_density must be one of 'day, 'month' or 'year'")
+
+
 @functools.lru_cache()
 def collection_exists(collection_id: str) -> bool:
     """

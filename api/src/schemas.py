@@ -71,22 +71,9 @@ class DashboardCollection(Collection):
         validators.cog_default_exists(item_assets)
         return item_assets
 
-    # Literal[str, None] doesn't quite work for null field inputs from a dict()
-    @validator("time_density")
-    def time_density_is_valid(cls, time_density):
-        if time_density and time_density not in ["day", "month", "year"]:
-            raise ValueError(
-                "If set, time_density must be one of 'day, 'month' or 'year'"
-            )
-        return time_density
-
     @root_validator
     def check_time_density(cls, values):
-        if values["is_periodic"] and not values["time_density"]:
-            raise ValueError(
-                "If is_periodic is true, time_density must be one of"
-                "'month', 'day', or 'year'"
-            )
+        validators.time_density_is_valid(values["is_periodic"], values["time_density"])
         return values
 
 
@@ -260,11 +247,7 @@ class Dataset(BaseModel):
 
     @root_validator
     def check_time_density(cls, values):
-        if values["is_periodic"] and not values["time_density"]:
-            raise ValueError(
-                "If is_periodic is true, time_density must be one of"
-                "'month', 'day', or 'year'"
-            )
+        validators.time_density_is_valid(values["is_periodic"], values["time_density"])
         return values
 
 
