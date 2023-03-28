@@ -19,6 +19,7 @@ from pydantic import (
     validator,
 )
 from stac_pydantic import Collection, Item, shared
+from stac_pydantic.links import Link
 from typing_extensions import Annotated
 
 from . import validators
@@ -55,9 +56,10 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(..., alias="dashboard:time_density")
+    is_periodic: Optional[bool] = Field(default=False, alias="dashboard:is_periodic")
+    time_density: Optional[str] = Field(default=None, alias="dashboard:time_density")
     item_assets: Optional[Dict]
+    links: Optional[List[Link]]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
 
@@ -77,6 +79,15 @@ class DashboardCollection(Collection):
                 "If set, time_density must be one of 'day, 'month' or 'year'"
             )
         return time_density
+
+    @root_validator
+    def check_time_density(cls, values):
+        if values["is_periodic"] and not values["time_density"]:
+            raise ValueError(
+                "If is_periodic is true, time_density must be one of"
+                "'month', 'day', or 'year'"
+            )
+        return values
 
 
 class Status(str, enum.Enum):
@@ -233,9 +244,9 @@ class Dataset(BaseModel):
     title: str
     description: str
     license: str
-    is_periodic: bool
-    time_density: Optional[str]
-    links: Optional[list[Dict]] = []
+    is_periodic: Optional[bool] = False
+    time_density: Optional[str] = None
+    links: Optional[List[Link]] = []
     discovery_items: List[ItemUnion]
 
     # collection id must be all lowercase, with optional - delimiter
@@ -249,17 +260,11 @@ class Dataset(BaseModel):
 
     @root_validator
     def check_time_density(cls, values):
-        if values["is_periodic"] and values["time_density"] not in [
-            "month",
-            "day",
-            "year",
-        ]:
+        if values["is_periodic"] and not values["time_density"]:
             raise ValueError(
                 "If is_periodic is true, time_density must be one of"
                 "'month', 'day', or 'year'"
             )
-        if not values["is_periodic"] and values["time_density"] is not None:
-            raise ValueError("If is_periodic is false, time_density must be null")
         return values
 
 
