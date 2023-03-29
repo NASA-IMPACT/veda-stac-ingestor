@@ -13,7 +13,6 @@ from pydantic import (
     BaseModel,
     Field,
     PositiveInt,
-    dataclasses,
     error_wrappers,
     root_validator,
     validator,
@@ -93,24 +92,76 @@ class Status(str, enum.Enum):
 
 
 class BaseResponse(BaseModel):
-    id: str
-    status: Status
+    id: str = Field(
+        ..., description="ID of the workflow execution in discover step function."
+    )
+    status: Status = Field(
+        ..., description="Status of the workflow execution in discover step function."
+    )
 
 
 class ExecutionResponse(BaseResponse):
-    message: str
-    discovered_files: List[str]
+    message: str = Field(..., description="Message returned from the step function.")
+    discovered_files: List[str] = Field(..., description="List of discovered files.")
+
+
+class AuthResponse(BaseModel):
+    AccessToken: str = Field(..., description="Token used to authenticate the user.")
+    ExpiresIn: int = Field(
+        ..., description="Number of seconds before the AccessToken expires."
+    )
+    TokenType: str = Field(
+        ..., description="Type of token being returned (e.g. 'Bearer')."
+    )
+    RefreshToken: str = Field(
+        ..., description="Token used to refresh the AccessToken when it expires."
+    )
+    IdToken: str = Field(
+        ..., description="Token containing information about the authenticated user."
+    )
+
+
+class WhoAmIResponse(BaseModel):
+    sub: str = Field(..., description="A unique identifier for the user")
+    cognito_groups: List[str] = Field(
+        ..., description="A list of Cognito groups the user belongs to"
+    )
+    iss: str = Field(..., description="The issuer of the token")
+    client_id: str = Field(..., description="The client ID of the authenticated app")
+    origin_jti: str = Field(
+        ..., description="A unique identifier for the authentication event"
+    )
+    event_id: str = Field(..., description="A unique identifier for the event")
+    token_use: str = Field(..., description="The intended use of the token")
+    scope: str = Field(..., description="The scope of the token")
+    auth_time: int = Field(..., description="The time when the user was authenticated")
+    exp: int = Field(..., description="The time when the token will expire")
+    iat: int = Field(..., description="The time when the token was issued")
+    jti: str = Field(..., description="A unique identifier for the token")
+    username: str = Field(..., description="The username of the user")
+    aud: str = Field(..., description="The audience of the token")
+
+
+class WorkflowExecutionResponse(BaseModel):
+    id: str = Field(
+        ..., description="ID of the workflow execution in discover step function."
+    )
+    status: Status = Field(
+        ..., description="Status of the workflow execution in discover step function."
+    )
 
 
 class Ingestion(BaseModel):
-    id: str
-    status: Status
-    message: Optional[str]
-    created_by: str
-    created_at: datetime = None
-    updated_at: datetime = None
+    id: str = Field(..., description="ID of the STAC item")
+    status: Status = Field(..., description="Status of the ingestion")
+    message: Optional[str] = Field(
+        None, description="Message returned from the step function."
+    )
+    created_by: str = Field(..., description="User who created the ingestion")
+    created_at: datetime = Field(None, description="Timestamp of ingestion creation")
+    updated_at: datetime = Field(None, description="Timestamp of ingestion update")
 
-    item: Item
+    item: Item = Field(..., description="STAC item to ingest")
 
     @validator("created_at", pre=True, always=True, allow_reuse=True)
     @validator("updated_at", pre=True, always=True, allow_reuse=True)
@@ -135,11 +186,10 @@ class Ingestion(BaseModel):
         return json.loads(self.json(by_alias=by_alias), parse_float=Decimal)
 
 
-@dataclasses.dataclass
-class ListIngestionRequest:
-    status: Status = Status.queued
-    limit: PositiveInt = None
-    next: Optional[str] = None
+class ListIngestionRequest(BaseModel):
+    status: Status = Field(Status.queued, description="Status of the ingestion")
+    limit: PositiveInt = Field(None, description="Limit number of results")
+    next: Optional[str] = Field(None, description="Next token (json) to load")
 
     def __post_init_post_parse__(self) -> None:
         # https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1049987786
@@ -162,8 +212,10 @@ class ListIngestionRequest:
 
 
 class ListIngestionResponse(BaseModel):
-    items: List[Ingestion]
-    next: Optional[str]
+    items: List[Ingestion] = Field(
+        ..., description="List of STAC items from ingestion."
+    )
+    next: Optional[str] = Field(None, description="Next token (json) to load")
 
     @validator("next", pre=True)
     def b64_encode_next(cls, next):
@@ -176,8 +228,8 @@ class ListIngestionResponse(BaseModel):
 
 
 class UpdateIngestionRequest(BaseModel):
-    status: Status = None
-    message: str = None
+    status: Status = Field(None, description="Status of the ingestion")
+    message: str = Field(None, description="Message of the ingestion")
 
 
 class WorkflowInputBase(BaseModel):
@@ -188,6 +240,15 @@ class WorkflowInputBase(BaseModel):
 
     @validator("collection")
     def exists(cls, collection):
+        """
+        Validate that the collection exists.
+
+        Parameters:
+        - collection (str): Name of the collection to be validated.
+
+        Returns:
+        - str: Name of the collection.
+        """
         validators.collection_exists(collection_id=collection)
         return collection
 

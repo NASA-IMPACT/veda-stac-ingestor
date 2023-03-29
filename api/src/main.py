@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
+from .doc import DESCRIPTION
 from . import (
     auth,
     collection as collection_loader,
@@ -27,7 +28,18 @@ settings = (
         ),
     )
 )
-app = FastAPI(root_path=settings.root_path)
+
+
+app = FastAPI(
+    root_path=settings.root_path,
+    title="VEDA STAC Ingestor API Documentation",
+    description=DESCRIPTION,
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+    contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
+)
 
 publisher = collection_loader.Publisher()
 
@@ -39,6 +51,9 @@ async def list_ingestions(
     list_request: schemas.ListIngestionRequest = Depends(),
     db: services.Database = Depends(dependencies.get_db),
 ):
+    """
+    Lists the STAC items from ingestion.
+    """
     return db.fetch_many(
         status=list_request.status, next=list_request.next, limit=list_request.limit
     )
@@ -55,6 +70,9 @@ async def create_ingestion(
     username: str = Depends(auth.get_username),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
+    """
+    Ingests a STAC item.
+    """
     return schemas.Ingestion(
         id=item.id,
         created_by=username,
@@ -71,6 +89,9 @@ async def create_ingestion(
 def get_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
 ) -> schemas.Ingestion:
+    """
+    Gets the status of an ingestion.
+    """
     return ingestion
 
 
@@ -84,6 +105,9 @@ def update_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),
 ):
+    """
+    Updates the STAC item with the provided item.
+    """
     updated_item = ingestion.copy(update=update.dict(exclude_unset=True))
     return updated_item.save(db)
 
@@ -97,6 +121,8 @@ def cancel_ingestion(
     ingestion: schemas.Ingestion = Depends(dependencies.fetch_ingestion),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
+    """
+    Cancels an ingestion in queued state."""
     if ingestion.status != schemas.Status.queued:
         raise HTTPException(
             status_code=400,
@@ -115,6 +141,9 @@ def cancel_ingestion(
     dependencies=[Depends(auth.get_username)],
 )
 def publish_collection(collection: schemas.DashboardCollection):
+    """
+    Publish a collection to the STAC database.
+    """
     # pgstac create collection
     try:
         publisher.ingest(collection)
@@ -132,6 +161,9 @@ def publish_collection(collection: schemas.DashboardCollection):
     dependencies=[Depends(auth.get_username)],
 )
 def delete_collection(collection_id: str):
+    """
+    Delete a collection from the STAC database.
+    """
     try:
         publisher.delete(collection_id=collection_id)
         return {f"Successfully deleted: {collection_id}"}
@@ -142,7 +174,7 @@ def delete_collection(collection_id: str):
 
 @app.post(
     "/workflow-executions",
-    response_model=schemas.BaseResponse,
+    response_model=schemas.WorkflowExecutionResponse,
     tags=["Workflow-Executions"],
     status_code=201,
 )
@@ -171,10 +203,7 @@ async def get_workflow_execution_status(
     return helpers.get_status(workflow_execution_id)
 
 
-@app.post(
-    "/token",
-    tags=["Auth"],
-)
+@app.post("/token", tags=["Auth"], response_model=schemas.AuthResponse)
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Dict:
@@ -246,7 +275,7 @@ async def publish_dataset(
     return return_dict
 
 
-@app.get("/auth/me")
+@app.get("/auth/me", tags=["Auth"], response_model=schemas.WhoAmIResponse)
 def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
