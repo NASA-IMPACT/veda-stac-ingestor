@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Dict
 
 from aws_cdk import (
@@ -12,7 +13,6 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda,
     aws_lambda_event_sources as events,
-    aws_lambda_python_alpha,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
 )
@@ -224,6 +224,7 @@ class StacIngestionApi(Stack):
         db_vpc: ec2.IVpc,
         db_security_group: ec2.ISecurityGroup,
         db_subnet_public: bool,
+        code_dir: str = "./",
     ) -> apigateway.LambdaRestApi:
         handler_role = iam.Role(
             self,
@@ -240,20 +241,24 @@ class StacIngestionApi(Stack):
                 )
             ],
         )
-        handler = aws_lambda_python_alpha.PythonFunction(
+        handler = aws_lambda.Function(
             self,
             "api-handler",
-            entry="api",
-            index="src/handler.py",
+            code=aws_lambda.Code.from_docker_build(
+                path=os.path.abspath(code_dir),
+                file="api/Dockerfile",
+                platform="linux/amd64",
+            ),
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             timeout=Duration.seconds(30),
+            handler="handler.handler",
             role=handler_role,
             environment={"DB_SECRET_ARN": db_secret.secret_arn, **env},
             vpc=db_vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_WITH_NAT
+                else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
             memory_size=2048,
@@ -301,12 +306,17 @@ class StacIngestionApi(Stack):
         db_vpc: ec2.IVpc,
         db_security_group: ec2.ISecurityGroup,
         db_subnet_public: bool,
-    ) -> aws_lambda_python_alpha.PythonFunction:
-        handler = aws_lambda_python_alpha.PythonFunction(
+        code_dir: str = "./",
+    ) -> aws_lambda.Function:
+        handler = aws_lambda.Function(
             self,
             "stac-ingestor",
-            entry="api",
-            index="src/ingestor.py",
+            code=aws_lambda.Code.from_docker_build(
+                path=os.path.abspath(code_dir),
+                file="api/Dockerfile",
+                platform="linux/amd64",
+            ),
+            handler="ingestor.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             timeout=Duration.seconds(180),
             environment={"DB_SECRET_ARN": db_secret.secret_arn, **env},
@@ -314,7 +324,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_WITH_NAT
+                else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
             memory_size=2048,
