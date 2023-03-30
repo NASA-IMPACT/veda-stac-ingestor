@@ -18,6 +18,7 @@ from pydantic import (
     validator,
 )
 from stac_pydantic import Collection, Item, shared
+from stac_pydantic.links import Link
 from typing_extensions import Annotated
 
 from . import validators
@@ -54,26 +55,25 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(..., alias="dashboard:time_density")
+    is_periodic: Optional[bool] = Field(default=False, alias="dashboard:is_periodic")
+    time_density: Optional[str] = Field(default=None, alias="dashboard:time_density")
     item_assets: Optional[Dict]
+    links: Optional[List[Link]]
     assets: Optional[Dict]
     extent: SpatioTemporalExtent
-    item_assets: Dict
+
+    class Config:
+        allow_population_by_field_name = True
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):
         validators.cog_default_exists(item_assets)
         return item_assets
 
-    # Literal[str, None] doesn't quite work for null field inputs from a dict()
-    @validator("time_density")
-    def time_density_is_valid(cls, time_density):
-        if not time_density and time_density not in ["day", "month", "year", None]:
-            raise ValueError(
-                "If set, time_density must be one of 'day, 'month' or 'year'"
-            )
-        return time_density
+    @root_validator
+    def check_time_density(cls, values):
+        validators.time_density_is_valid(values["is_periodic"], values["time_density"])
+        return values
 
 
 class Status(str, enum.Enum):
@@ -292,8 +292,9 @@ class Dataset(BaseModel):
     title: str
     description: str
     license: str
-    is_periodic: bool
-    time_density: Optional[str]
+    is_periodic: Optional[bool] = False
+    time_density: Optional[str] = None
+    links: Optional[List[Link]] = []
     discovery_items: List[ItemUnion]
 
     # collection id must be all lowercase, with optional - delimiter
@@ -307,17 +308,7 @@ class Dataset(BaseModel):
 
     @root_validator
     def check_time_density(cls, values):
-        if values["is_periodic"] and values["time_density"] not in [
-            "month",
-            "day",
-            "year",
-        ]:
-            raise ValueError(
-                "If is_periodic is true, time_density must be one of"
-                "'month', 'day', or 'year'"
-            )
-        if not values["is_periodic"] and values["time_density"] is not None:
-            raise ValueError("If is_periodic is false, time_density must be null")
+        validators.time_density_is_valid(values["is_periodic"], values["time_density"])
         return values
 
 
@@ -334,13 +325,20 @@ class COGDataset(Dataset):
 
     @root_validator
     def check_sample_files(cls, values):
-        if "s3" not in [item.discovery for item in values["discovery_items"]]:
+        # pydantic doesn't stop at the first validation,
+        # if the validation for s3 item access fails, "discovery_items" isn't returned
+        # this avoids throwing a KeyError
+        if not (discovery_items := values.get("discovery_items")):
+            return
+
+        if "s3" not in [item.discovery for item in discovery_items]:
             return values
+
         # TODO cmr handling/validation
         invalid_fnames = []
-        for fname in values["sample_files"]:
+        for fname in values.get("sample_files", []):
             found_match = False
-            for item in values["discovery_items"]:
+            for item in discovery_items:
                 if all(
                     [
                         item.discovery == "s3",

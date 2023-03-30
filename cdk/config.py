@@ -79,6 +79,15 @@ class Deployment(BaseSettings):
         description="ID of AWS ECR repository used for OIDC provider",
     )
 
+    oidc_provider_arn: Optional[AwsOidcArn] = Field(
+        description="ARN of AWS OIDC provider used for authentication"
+    )
+
+    oidc_repo_id: str = Field(
+        "NASA-IMPACT/veda-stac-ingestor",
+        description="ID of AWS ECR repository used for OIDC provider",
+    )
+
     class Config:
         env_prefix = ""
         case_sentive = False

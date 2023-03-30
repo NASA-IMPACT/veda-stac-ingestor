@@ -8,7 +8,7 @@ import requests
 from dateutil.relativedelta import relativedelta
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_s3_credentials():
     from .main import settings
 
@@ -38,8 +38,10 @@ def s3_object_is_accessible(bucket: str, key: str):
         )
 
 
-@functools.cache
-def s3_bucket_object_is_accessible(bucket: str, prefix: str, zarr_store: str):
+@functools.lru_cache
+def s3_bucket_object_is_accessible(
+    bucket: str, prefix: str, zarr_store: Union[str, None] = None
+):
     """
     Ensure we can send HEAD requests to S3 objects in bucket.
     """
@@ -52,8 +54,7 @@ def s3_bucket_object_is_accessible(bucket: str, prefix: str, zarr_store: str):
     except client.exceptions.ClientError as e:
         raise ValueError(f"Access denied: {e.__dict__['response']['Error']['Message']}")
     content = result.get("Contents", [])
-    # if the prefix exists, but no items exist, the content still has one element
-    if len(content) <= 1:
+    if len(content) < 1:
         raise ValueError("No data in bucket/prefix.")
     try:
         client.head_object(Bucket=bucket, Key=content[0].get("Key"))
@@ -83,6 +84,18 @@ def cog_default_exists(item_assets: Dict):
         item_assets["cog_default"]
     except KeyError:
         raise ValueError("Collection doesn't have a default cog placeholder")
+
+
+def time_density_is_valid(is_periodic: bool, time_density: Union[str, None]):
+    """
+    Ensures that the time_density is valid based on the value of is_periodic
+    """
+    if is_periodic and not time_density:
+        raise ValueError("If is_periodic is true, time_density must be set.")
+
+    # Literal[str, None] doesn't quite work for null field inputs from a dict()
+    if time_density and time_density not in ["day", "month", "year"]:
+        raise ValueError("If set, time_density must be one of 'day, 'month' or 'year'")
 
 
 @functools.lru_cache()

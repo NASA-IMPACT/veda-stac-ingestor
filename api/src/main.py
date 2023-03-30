@@ -2,7 +2,7 @@ import os
 from getpass import getuser
 from typing import Dict, Union
 
-import requests  # noqa: F401  see comment in validate_dataset()
+import requests
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -258,15 +258,19 @@ async def publish_dataset(
     collection = schemas.DashboardCollection.parse_obj(collection_data)
     publisher.ingest(collection)
 
-    return_dict = {"message": f"Successfully published dataset: {dataset.collection}"}
+    return_dict = {
+        "message": f"Successfully published collection: {dataset.collection}."
+    }
 
     if dataset.data_type == schemas.DataType.cog:
+        workflow_runs = []
         for discovery in dataset.discovery_items:
             discovery.collection = dataset.collection
-            await start_workflow_execution(discovery)
-            return_dict[
-                "message"
-            ] += f"Initiated workflows for {len(dataset.discovery_items)} items."
+            response = await start_workflow_execution(discovery)
+            workflow_runs.append(response.id)
+        if workflow_runs:
+            return_dict["message"] += f" {len(workflow_runs)}  workflows initiated."
+            return_dict["workflows_ids"] = workflow_runs
 
     return return_dict
 

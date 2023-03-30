@@ -12,8 +12,6 @@ try:
 except ImportError:
     from schemas import BaseResponse, Status
 
-EXECUTION_NAME_PREFIX = "workflows-api"
-
 
 def trigger_discover(input: Dict) -> Dict:
     if not (MWAA_ENV := os.environ.get("MWAA_ENV")):
