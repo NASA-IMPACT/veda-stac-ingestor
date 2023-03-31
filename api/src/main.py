@@ -2,22 +2,19 @@ import os
 from getpass import getuser
 from typing import Dict, Union
 
+import auth
+import collection as collection_loader
+import config
+import dependencies
+import helpers
 import requests
+import schemas
+import services
+from doc import DESCRIPTION
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-
-from .doc import DESCRIPTION
-from . import (
-    auth,
-    collection as collection_loader,
-    config,
-    dependencies,
-    helpers,
-    schemas,
-    services,
-)
 
 settings = (
     config.Settings()

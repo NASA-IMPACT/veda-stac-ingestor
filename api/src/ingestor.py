@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence
 
 import boto3
 import ddbcereal
+from auth import get_settings
 from boto3.dynamodb.types import TypeDeserializer
+from dependencies import get_table
 from pypgstac.db import PgstacDB
-
-from .auth import get_settings
-from .dependencies import get_table
-from .schemas import Ingestion, Status
-from .utils import (
+from schemas import Ingestion, Status
+from utils import (
     IngestionType,
     convert_decimals_to_float,
     get_db_credentials,

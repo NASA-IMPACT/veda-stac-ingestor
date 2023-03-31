@@ -5,12 +5,11 @@ import logging
 from typing import Dict
 
 import boto3
+import config
 import requests
 from authlib.jose import JsonWebKey, JsonWebToken, JWTClaims, KeySet, errors
 from cachetools import TTLCache, cached
 from fastapi import Depends, HTTPException, security
-
-from . import config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ token_scheme = security.HTTPBearer()
 
 
 def get_settings() -> config.Settings:
-    from . import main
+    import main
 
     return main.settings
 
