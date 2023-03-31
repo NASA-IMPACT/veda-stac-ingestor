@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 
 @functools.lru_cache
 def get_s3_credentials():
-    from .main import settings
+    from main import settings
 
     print("Fetching S3 Credentials...")
 
@@ -103,7 +103,7 @@ def collection_exists(collection_id: str) -> bool:
     """
     Ensure collection exists in STAC
     """
-    from .main import settings
+    from main import settings
 
     url = "/".join(
         f'{url.strip("/")}' for url in [settings.stac_url, "collections", collection_id]

@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
 from urllib.parse import urlparse
 
+import validators
 from fastapi.exceptions import RequestValidationError
 from pydantic import (
     BaseModel,
@@ -17,15 +18,13 @@ from pydantic import (
     root_validator,
     validator,
 )
+from schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
 from stac_pydantic import Collection, Item, shared
 from stac_pydantic.links import Link
 from typing_extensions import Annotated
 
-from . import validators
-from .schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
-
 if TYPE_CHECKING:
-    from . import services
+    import services
 
 
 class AccessibleAsset(shared.Asset):
