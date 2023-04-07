@@ -20,10 +20,11 @@ from pydantic import (
     validator,
 )
 from stac_pydantic import Collection, Item, shared
+from stac_pydantic.links import Link
 from typing_extensions import Annotated
 
 from . import validators
-from .schema_helpers import BboxExtent, DatetimeExtent, TemporalExtent
+from .schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
 
 if TYPE_CHECKING:
     from . import services
@@ -56,10 +57,12 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: bool = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(..., alias="dashboard:time_density")
-    item_assets: Dict
-    extent: DatetimeExtent
+    is_periodic: Optional[bool] = Field(default=False, alias="dashboard:is_periodic")
+    time_density: Optional[str] = Field(default=None, alias="dashboard:time_density")
+    item_assets: Optional[Dict]
+    links: Optional[List[Link]]
+    assets: Optional[Dict]
+    extent: SpatioTemporalExtent
 
     @validator("item_assets")
     def cog_default_exists(cls, item_assets):

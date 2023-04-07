@@ -22,6 +22,9 @@ class DatetimeExtent(Extent):
     # reimplement stac_pydantic's Extent to leverage datetime types
     temporal: DatetimeInterval
 
+class SpatioTemporalExtent(Extent):
+    # reimplement stac_pydantic's Extent to leverage datetime types
+    temporal: DatetimeInterval
 
 # TODO we should make these more consistent with stac_pydantic's existing models
 class BboxExtent(BaseModel):
