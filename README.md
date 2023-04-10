@@ -25,16 +25,16 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
    source .venv/bin/activate
    ```
 
-1. Install dependencies:
+2. Install dependencies:
 
    ```
    pip install -r api/requirements.txt
    ```
 
-1. Run API:
+3. Run API:
 
    ```
-   uvicorn api.src.main:app --reload
+   python api/local.py
    ```
 
    _Note:_ If no `.env` file is present, the API will connect to resources in the `dev` deployment via [pydantic-ssm-settings](https://github.com/developmentseed/pydantic-ssm-settings). This requires that your `AWS_PROFILE` be set to the profile associated with the AWS account hosting the `dev` deployment.
