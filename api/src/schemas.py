@@ -57,26 +57,7 @@ class AccessibleItem(Item):
 
 
 class DashboardCollection(Collection):
-    is_periodic: Optional[bool] = Field(default=False, alias="dashboard:is_periodic")
-    time_density: Optional[str] = Field(default=None, alias="dashboard:time_density")
-    item_assets: Optional[Dict]
-    links: Optional[List[Link]]
-    assets: Optional[Dict]
-    extent: SpatioTemporalExtent
-
-    @validator("item_assets")
-    def cog_default_exists(cls, item_assets):
-        validators.cog_default_exists(item_assets)
-        return item_assets
-
-    # Literal[str, None] doesn't quite work for null field inputs from a dict()
-    @validator("time_density")
-    def time_density_is_valid(cls, time_density):
-        if not time_density and time_density not in ["day", "month", "year", None]:
-            raise ValueError(
-                "If set, time_density must be either 'day, 'month' or 'year'"
-            )
-        return time_density
+    id: str
 
 
 class Status(str, enum.Enum):
