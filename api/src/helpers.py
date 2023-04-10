@@ -8,9 +8,9 @@ import requests
 from fastapi import HTTPException
 
 try:
-    from schemas import BaseResponse, Status
+    from src.schemas import BaseResponse, Status
 except ImportError:
-    from schemas import BaseResponse, Status
+    from src.schemas import BaseResponse, Status
 
 
 def trigger_discover(input: Dict) -> Dict:

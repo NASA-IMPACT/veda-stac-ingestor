@@ -5,21 +5,21 @@ import fsspec
 import xarray as xr
 import xstac
 from pypgstac.db import PgstacDB
-from schemas import (
+from src.schemas import (
     COGDataset,
     DashboardCollection,
     DataType,
     SpatioTemporalExtent,
     ZarrDataset,
 )
-from utils import (
+from src.utils import (
     IngestionType,
     convert_decimals_to_float,
     get_db_credentials,
     load_into_pgstac,
 )
-from validators import get_s3_credentials
-from vedaloader import VEDALoader
+from src.validators import get_s3_credentials
+from src.vedaloader import VEDALoader
 
 
 class Publisher:
