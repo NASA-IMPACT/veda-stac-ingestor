@@ -1,7 +1,7 @@
 import decimal
 from typing import TYPE_CHECKING, List
 
-import schemas
+import src.schemas as schemas
 from boto3.dynamodb import conditions
 from boto3.dynamodb.types import DYNAMODB_CONTEXT
 from pydantic import parse_obj_as

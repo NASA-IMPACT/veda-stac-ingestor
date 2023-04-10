@@ -13,3 +13,4 @@ python-dotenv
 python-multipart
 pytest-mock
 pre-commit
+uvicorn

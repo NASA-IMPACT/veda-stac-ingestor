@@ -8,8 +8,8 @@ import orjson
 import pydantic
 from pypgstac.db import PgstacDB
 from pypgstac.load import Methods
-from schemas import AccessibleItem, DashboardCollection
-from vedaloader import VEDALoader
+from src.schemas import AccessibleItem, DashboardCollection
+from src.vedaloader import VEDALoader
 
 
 class IngestionType(str, Enum):
