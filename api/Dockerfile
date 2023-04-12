@@ -16,5 +16,6 @@ RUN find /asset -type d -a -name 'tests' -print0 | xargs -0 rm -rf
 RUN rm -rdf /asset/numpy/doc/ /asset/boto3* /asset/botocore* /asset/bin /asset/geos_license /asset/Misc
 
 COPY api/handler.py /asset/handler.py
+COPY api/ingestor.py /asset/ingestor.py
 
 CMD ["echo", "hello world"]
