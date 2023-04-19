@@ -1,0 +1,67 @@
+name: Deploy
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      stage:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: true
+      role-session-name:
+        required: false
+        type: string
+        default: github-actions-deployment
+    secrets:
+      DEPLOYMENT_ROLE_ARN:
+        required: true
+      ENV_AWS_SECRET_NAME:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.aws-region }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.DEPLOYMENT_ROLE_ARN }}
+          role-session-name: ${{ inputs.role-session-name }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Install node and related deps
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17.3.0
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk@2
+
+      - name: Get dev environment configuration for develop branch
+        run: ./scripts/sync-env.sh ${{ secrets.ENV_AWS_SECRET_NAME }}
+
+      - name: Deploy
+        run: cd deploy && cdk deploy --all --require-approval never
