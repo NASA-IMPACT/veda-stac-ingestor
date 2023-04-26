@@ -25,7 +25,7 @@ def trigger_discover(input: Dict) -> Dict:
     )
 
     unique_key = str(uuid4())
-    raw_data = f"dags trigger ghgc_discover --conf '{input.json()}' -r {unique_key}"
+    raw_data = f"dags trigger veda_discover --conf '{input.json()}' -r {unique_key}"
     mwaa_response = requests.post(
         mwaa_webserver_hostname,
         headers={
