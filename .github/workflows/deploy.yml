@@ -69,8 +69,6 @@ jobs:
       - name: Install python dependencies
         run: |
           pip install \
-            --upgrade \
-            --upgrade-strategy eager \
             -r requirements.txt \
 
       - name: Get relevant environment configuration from aws secrets
