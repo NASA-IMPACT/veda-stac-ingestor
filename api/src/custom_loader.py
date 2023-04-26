@@ -6,7 +6,7 @@ from pypgstac.load import Loader
 logger = logging.getLogger(__name__)
 
 
-class VEDALoader(Loader):
+class CustomLoader(Loader):
     """Utilities for loading data and updating collection summaries/extents."""
 
     def __init__(self, db) -> None:

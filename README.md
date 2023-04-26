@@ -1,4 +1,4 @@
-# VEDA STAC Ingestor
+# GHGC STAC Ingestor
 
 This service provides an entry-point for users/services to add new records to our STAC database. Its primary functions are to 1) validate the STAC Items before insertion, 2) batch the insertions to reduce load on our STAC database.
 
@@ -41,7 +41,7 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
 ## Using the API
 
-Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
+Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the GHGC data store & STAC API.
 
 ## Deployment
 

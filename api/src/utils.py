@@ -9,7 +9,7 @@ import pydantic
 from pypgstac.db import PgstacDB
 from pypgstac.load import Methods
 from src.schemas import AccessibleItem, DashboardCollection
-from src.vedaloader import VEDALoader
+from src.custom_loader import CustomLoader
 
 
 class IngestionType(str, Enum):
@@ -100,7 +100,7 @@ def load_into_pgstac(
     Bulk insert STAC records into pgSTAC.
     The ingestion can be items or collection, determined by the `table` arg.
     """
-    loader = VEDALoader(db=db)
+    loader = CustomLoader(db=db)
     loading_function = load_items
     if table == IngestionType.collections:
         loading_function = load_collection

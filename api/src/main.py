@@ -21,7 +21,7 @@ settings = (
     if os.environ.get("NO_PYDANTIC_SSM_SETTINGS")
     else config.Settings.from_ssm(
         stack=os.environ.get(
-            "STACK", f"veda-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
+            "STACK", f"ghgc-stac-ingestion-system-{os.environ.get('STAGE', getuser())}"
         ),
     )
 )
@@ -29,13 +29,13 @@ settings = (
 
 app = FastAPI(
     root_path=settings.root_path,
-    title="VEDA STAC Ingestor API Documentation",
+    title="GHGC STAC Ingestor API Documentation",
     description=DESCRIPTION,
     license_info={
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
+    contact={"url": "https://github.com/NASA-IMPACT/ghgc-stac-ingestor"},
 )
 
 publisher = collection_loader.Publisher()

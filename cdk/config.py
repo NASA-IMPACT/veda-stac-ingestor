@@ -62,11 +62,11 @@ class Deployment(BaseSettings):
 
     raster_url: AnyHttpUrl = Field(description="URL of Raster API")
 
-    data_access_role: AwsArn = Field(
+    data_access_role: Optional[AwsArn] = Field(
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
-    airflow_env: Optional[str] = Field(
+    mwaa_env: Optional[str] = Field(
         description="Environment of Airflow deployment",
     )
 
@@ -75,7 +75,7 @@ class Deployment(BaseSettings):
     )
 
     oidc_repo_id: str = Field(
-        "NASA-IMPACT/veda-stac-ingestor",
+        "NASA-IMPACT/ghgc-stac-ingestor",
         description="ID of AWS ECR repository used for OIDC provider",
     )
 
@@ -86,7 +86,7 @@ class Deployment(BaseSettings):
 
     @property
     def stack_name(self) -> str:
-        return f"veda-stac-ingestion-{self.stage}"
+        return f"ghgc-stac-ingestion-{self.stage}"
 
     @property
     def env(self) -> aws_cdk.Environment:

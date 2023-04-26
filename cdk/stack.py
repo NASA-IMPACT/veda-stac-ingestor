@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, Union
 
 from aws_cdk import (
     Duration,
@@ -33,8 +33,10 @@ class StacIngestionApi(Stack):
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
 
-        data_access_role = iam.Role.from_role_arn(
-            self, "data-access-role", config.data_access_role
+        data_access_role = (
+            iam.Role.from_role_arn(self, "data-access-role", config.data_access_role)
+            if config.data_access_role
+            else None
         )
 
         user_pool = cognito.UserPool.from_user_pool_id(
@@ -63,11 +65,11 @@ class StacIngestionApi(Stack):
             "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
-            "DATA_ACCESS_ROLE": data_access_role.role_arn,
+            "DATA_ACCESS_ROLE": config.data_access_role or "",
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
-            "MWAA_ENV": config.airflow_env,
+            "MWAA_ENV": config.mwaa_env,
             "RASTER_URL": config.raster_url,
             "OIDC_PROVIDER_ARN": config.oidc_provider_arn,
             "OIDC_PROVIDER_REPO_ID": config.oidc_repo_id,
@@ -85,7 +87,7 @@ class StacIngestionApi(Stack):
             security_group_id=config.stac_db_security_group_id,
         )
 
-        lambda_env = {k: env.get(k, None) for k in lambda_env_keys}
+        lambda_env = {k: env[k] for k in lambda_env_keys if env.get(k)}
 
         handler = self.build_api_lambda(
             table=table,
@@ -222,7 +224,7 @@ class StacIngestionApi(Stack):
         *,
         table: dynamodb.ITable,
         env: Dict[str, str],
-        data_access_role: iam.IRole,
+        data_access_role: Union[iam.IRole, None],
         user_pool: cognito.IUserPool,
         stage: str,
         db_secret: secretsmanager.ISecret,
@@ -263,16 +265,17 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,
         )
         table.grant_read_write_data(handler)
-        data_access_role.grant(
-            handler.grant_principal,
-            "sts:AssumeRole",
-        )
+        if data_access_role:
+            data_access_role.grant(
+                handler.grant_principal,
+                "sts:AssumeRole",
+            )
 
         handler.add_to_role_policy(
             iam.PolicyStatement(
@@ -329,7 +332,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,

@@ -19,7 +19,7 @@ from src.utils import (
     load_into_pgstac,
 )
 from src.validators import get_s3_credentials
-from src.vedaloader import VEDALoader
+from src.custom_loader import CustomLoader
 
 
 class Publisher:
@@ -160,5 +160,5 @@ class Publisher:
         """
         creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
         with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
-            loader = VEDALoader(db=db)
+            loader = CustomLoader(db=db)
             loader.delete_collection(collection_id)
