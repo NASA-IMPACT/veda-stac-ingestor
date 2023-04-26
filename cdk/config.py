@@ -66,7 +66,7 @@ class Deployment(BaseSettings):
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
-    airflow_env: Optional[str] = Field(
+    mwaa_env: Optional[str] = Field(
         description="Environment of Airflow deployment",
     )
 

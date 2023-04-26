@@ -67,7 +67,7 @@ class StacIngestionApi(Stack):
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
-            "MWAA_ENV": config.airflow_env,
+            "MWAA_ENV": config.mwaa_env,
             "RASTER_URL": config.raster_url,
             "OIDC_PROVIDER_ARN": config.oidc_provider_arn,
             "OIDC_PROVIDER_REPO_ID": config.oidc_repo_id,
