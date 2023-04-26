@@ -68,10 +68,7 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          pip install \
-            --upgrade \
-            --upgrade-strategy eager \
-            -r requirements.txt \
+          pip install -r requirements.txt
 
       - name: Get relevant environment configuration from aws secrets
         run: ./scripts/sync-env.sh ${{ secrets.ENV_AWS_SECRET_NAME }}
