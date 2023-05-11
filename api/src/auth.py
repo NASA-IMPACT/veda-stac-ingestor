@@ -1,6 +1,3 @@
-import base64
-import hashlib
-import hmac
 import logging
 from typing import Dict
 
@@ -65,25 +62,11 @@ def get_username(claims: security.HTTPBasicCredentials = Depends(decode_token)):
     return claims["sub"]
 
 
-def _get_secret_hash(username: str, client_id: str, client_secret: str) -> str:
-    # A keyed-hash message authentication code (HMAC) calculated using
-    # the secret key of a user pool client and username plus the client
-    # ID in the message.
-    message = username + client_id
-    dig = hmac.new(
-        bytearray(client_secret, "utf-8"),
-        msg=message.encode("UTF-8"),
-        digestmod=hashlib.sha256,
-    ).digest()
-    return base64.b64encode(dig).decode()
-
-
 def authenticate_and_get_token(
     username: str,
     password: str,
     user_pool_id: str,
     app_client_id: str,
-    app_client_secret: str,
 ) -> Dict:
     client = boto3.client("cognito-idp")
     try:
@@ -94,9 +77,6 @@ def authenticate_and_get_token(
             AuthParameters={
                 "USERNAME": username,
                 "PASSWORD": password,
-                "SECRET_HASH": _get_secret_hash(
-                    username, app_client_id, app_client_secret
-                ),
             },
         )
     except client.exceptions.NotAuthorizedException:

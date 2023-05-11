@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Dict, Union
 
@@ -48,35 +47,33 @@ class StacIngestionApi(Stack):
         lambda_env_keys = [
             "DYNAMODB_TABLE",
             "JWKS_URL",
-            "ROOT_PATH",
+            # "ROOT_PATH",
             "NO_PYDANTIC_SSM_SETTINGS",
             "STAC_URL",
             "DATA_ACCESS_ROLE",
             "USERPOOL_ID",
             "CLIENT_ID",
-            "CLIENT_SECRET",
             "MWAA_ENV",
             "RASTER_URL",
+            "PATH_PREFIX",
         ]
 
         env = {
             "DYNAMODB_TABLE": table.table_name,
             "JWKS_URL": jwks_url,
-            "ROOT_PATH": f"/{config.stage}",
+            # "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
             "DATA_ACCESS_ROLE": config.data_access_role or "",
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
-            "CLIENT_SECRET": config.client_secret,
             "MWAA_ENV": config.mwaa_env,
             "RASTER_URL": config.raster_url,
-            "OIDC_PROVIDER_ARN": config.oidc_provider_arn,
-            "OIDC_PROVIDER_REPO_ID": config.oidc_repo_id,
             "STAC_DB_SECRET_NAME": config.stac_db_secret_name,
             "STAC_DB_VPC_ID": config.stac_db_vpc_id,
             "STAC_DB_SECURITY_GROUP_ID": config.stac_db_security_group_id,
             "STAC_DB_PUBLIC_SUBNET": config.stac_db_public_subnet,
+            "PATH_PREFIX": config.path_prefix,
         }
 
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
@@ -94,14 +91,13 @@ class StacIngestionApi(Stack):
             env=lambda_env,
             data_access_role=data_access_role,
             user_pool=user_pool,
-            stage=config.stage,
             db_secret=db_secret,
             db_vpc=db_vpc,
             db_security_group=db_security_group,
             db_subnet_public=config.stac_db_public_subnet,
         )
 
-        self.build_api(
+        self.ingestor_api = self.build_api(
             handler=handler,
             stage=config.stage,
         )
@@ -116,6 +112,11 @@ class StacIngestionApi(Stack):
         )
 
         self.register_ssm_parameter(
+            name="ingestor_url",
+            value=self.ingestor_api.url,
+            description="URL for ingestor",
+        )
+        self.register_ssm_parameter(
             name="jwks_url",
             value=jwks_url,
             description="JWKS URL for Cognito user pool",
@@ -124,75 +125,6 @@ class StacIngestionApi(Stack):
             name="dynamodb_table",
             value=table.table_name,
             description="Name of table used to store ingestions",
-        )
-
-        env_secret = self.build_env_secret(config.stage, env)
-        secret_arn: str = env_secret.secret_arn
-
-        if config.oidc_provider_arn:
-            self.build_oidc(
-                oidc_provider_arn=config.oidc_provider_arn,
-                oidc_repo_id=config.oidc_repo_id,
-                secret_arn=secret_arn,
-                stage=config.stage,
-            )
-
-    def build_oidc(
-        self, oidc_provider_arn: str, oidc_repo_id: str, secret_arn: str, stage: str
-    ):
-        # Create an IAM OIDC provider for the specified provider ARN
-        oidc_provider = iam.OpenIdConnectProvider.from_open_id_connect_provider_arn(
-            self, "OIDCProvider", oidc_provider_arn
-        )
-        # create IAM role for provider access from specified repo
-        # the role should allow a github action in that repo
-        # to deploy resources (TODO) and read a secret
-        oidc_role = iam.Role(
-            self,
-            f"stac-ingestor-oidc-role-{stage}",
-            assumed_by=iam.WebIdentityPrincipal(
-                oidc_provider.open_id_connect_provider_arn,
-                conditions={
-                    "StringEquals": {
-                        f"{oidc_provider.open_id_connect_provider_issuer}:sub": f"repo:{oidc_repo_id}"
-                    }
-                },
-            ),
-        )
-        oidc_role.add_to_policy(
-            iam.PolicyStatement(
-                actions=["sts:AssumeRoleWithWebIdentity"],
-                resources=[oidc_provider_arn],
-            )
-        )
-        # Create an IAM policy statement that allows getting the secret value
-        get_secret_statement = iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=["secretsmanager:GetSecretValue"],
-            resources=[secret_arn],
-        )
-
-        oidc_policy = iam.Policy(
-            self,
-            f"stac-ingestor-oidc-policy-{stage}",
-            policy_name=f"stac-ingestor-oidc-policy-{stage}",
-            roles=[oidc_role],
-            statements=[get_secret_statement],
-        )
-        return oidc_role, oidc_policy, oidc_provider
-
-    def build_env_secret(self, stage: str, env_config: dict) -> secretsmanager.ISecret:
-        # create secret to store environment variables
-        return secretsmanager.Secret(
-            self,
-            f"stac-ingestor-env-secret-{stage}",
-            secret_name=f"stac-ingestor-env-secret-{stage}",
-            description="Contains env vars used for deployment of veda-stac-ingestor",
-            generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template=json.dumps(env_config),
-                generate_string_key="password",
-                exclude_punctuation=True,
-            ),
         )
 
     def build_jwks_url(self, userpool_id: str) -> str:
@@ -226,7 +158,6 @@ class StacIngestionApi(Stack):
         env: Dict[str, str],
         data_access_role: Union[iam.IRole, None],
         user_pool: cognito.IUserPool,
-        stage: str,
         db_secret: secretsmanager.ISecret,
         db_vpc: ec2.IVpc,
         db_security_group: ec2.ISecurityGroup,
@@ -240,7 +171,7 @@ class StacIngestionApi(Stack):
                 "Role used by STAC Ingestor. Manually defined so that we can choose a "
                 "name that is supported by the data access roles trust policy"
             ),
-            role_name=f"delta-backend-staging-stac-ingestion-api-{stage}",
+            role_name=f"{Stack.of(self).stack_name}-lambda-role",
             assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
@@ -265,7 +196,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_WITH_NAT
+                else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
             memory_size=2048,
@@ -276,6 +207,14 @@ class StacIngestionApi(Stack):
                 handler.grant_principal,
                 "sts:AssumeRole",
             )
+
+        # Give read access to any bucket/key
+        handler.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["s3:ListBucket", "s3:GetObject"],
+                resources=["arn:aws:s3:::*"],
+            )
+        )
 
         handler.add_to_role_policy(
             iam.PolicyStatement(
@@ -332,7 +271,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_WITH_NAT
+                else ec2.SubnetType.PRIVATE_ISOLATED
             ),
             allow_public_subnet=True,
             memory_size=2048,
