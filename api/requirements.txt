@@ -1,6 +1,6 @@
 # Waiting for https://github.com/stac-utils/stac-pydantic/pull/116 and 117
 Authlib==1.0.1
-cachetools==5.1.0
+cachetools==5.3.*
 ddbcereal==2.1.1
 fastapi>=0.75.1
 fsspec==2023.3.0
