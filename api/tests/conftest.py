@@ -29,7 +29,7 @@ def test_environ():
 @pytest.fixture
 def mock_ssm_parameter_store():
     with mock_ssm():
-        yield boto3.client("ssm")
+        yield boto3.client("ssm", region_name="us-west-2")
 
 
 @pytest.fixture

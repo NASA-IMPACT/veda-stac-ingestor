@@ -4,16 +4,15 @@ from typing import Dict, Union
 
 import requests
 import src.auth as auth
-import src.collection as collection_loader
 import src.config as config
 import src.dependencies as dependencies
-import src.helpers as helpers
 import src.schemas as schemas
 import src.services as services
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from src.collection_publisher import CollectionPublisher
 from src.doc import DESCRIPTION
 
 settings = (
@@ -38,7 +37,7 @@ app = FastAPI(
     contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
 )
 
-publisher = collection_loader.Publisher()
+collection_publisher = CollectionPublisher()
 
 
 @app.get(
@@ -62,13 +61,13 @@ async def list_ingestions(
     tags=["Ingestion"],
     status_code=201,
 )
-async def create_ingestion(
+async def enqueue_ingestion(
     item: schemas.AccessibleItem,
     username: str = Depends(auth.get_username),
     db: services.Database = Depends(dependencies.get_db),
 ) -> schemas.Ingestion:
     """
-    Ingests a STAC item.
+    Queues a STAC item for ingestion.
     """
     return schemas.Ingestion(
         id=item.id,
@@ -143,7 +142,7 @@ def publish_collection(collection: schemas.DashboardCollection):
     """
     # pgstac create collection
     try:
-        publisher.ingest(collection)
+        collection_publisher.ingest(collection)
         return {f"Successfully published: {collection.id}"}
     except Exception as e:
         raise HTTPException(
@@ -162,7 +161,7 @@ def delete_collection(collection_id: str):
     Delete a collection from the STAC database.
     """
     try:
-        publisher.delete(collection_id=collection_id)
+        collection_publisher.delete(collection_id=collection_id)
         return {f"Successfully deleted: {collection_id}"}
     except Exception as e:
         print(e)
@@ -170,34 +169,24 @@ def delete_collection(collection_id: str):
 
 
 @app.post(
-    "/workflow-executions",
-    response_model=schemas.WorkflowExecutionResponse,
-    tags=["Workflow-Executions"],
+    "/items",
+    tags=["Items"],
     status_code=201,
+    dependencies=[Depends(auth.get_username)],
 )
-async def start_workflow_execution(
-    input: Union[schemas.CmrInput, schemas.S3Input] = Body(
-        ..., discriminator="discovery"
-    ),
-) -> schemas.BaseResponse:
+def publish_item(item: schemas.Item):
     """
-    Triggers the ingestion workflow
+    Publish a collection to the STAC database.
     """
-    return helpers.trigger_discover(input)
-
-
-@app.get(
-    "/workflow-executions/{workflow_execution_id}",
-    response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],
-    tags=["Workflow-Executions"],
-)
-async def get_workflow_execution_status(
-    workflow_execution_id: str,
-) -> Union[schemas.ExecutionResponse, schemas.BaseResponse]:
-    """
-    Returns the status of the workflow execution
-    """
-    return helpers.get_status(workflow_execution_id)
+    # pgstac create collection
+    try:
+        collection_publisher.ingest(item)
+        return {f"Successfully published: {item.id}"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=(f"Unable to publish collection: {e}"),
+        )
 
 
 @app.post("/token", tags=["Auth"], response_model=schemas.AuthResponse)
@@ -214,62 +203,6 @@ async def get_token(
         settings.client_id,
         settings.client_secret,
     )
-
-
-@app.post(
-    "/dataset/validate",
-    tags=["Dataset"],
-    dependencies=[Depends(auth.get_username)],
-)
-def validate_dataset(dataset: schemas.COGDataset):
-    # for all sample files in dataset, test access using raster /validate endpoint
-    for sample in dataset.sample_files:
-        url = f"{settings.raster_url}/cog/validate?url={sample}"
-        try:
-            response = requests.get(url)
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=(f"Unable to validate dataset: {response.text}"),
-                )
-        except Exception as e:
-            raise HTTPException(
-                status_code=422,
-                detail=(f"Sample file {sample} is an invalid COG: {e}"),
-            )
-    return {
-        f"Dataset metadata is valid and ready to be published - {dataset.collection}"
-    }
-
-
-@app.post(
-    "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
-)
-async def publish_dataset(
-    dataset: Union[schemas.ZarrDataset, schemas.COGDataset] = Body(
-        ..., discriminator="data_type"
-    )
-):
-    # Construct and load collection
-    collection_data = publisher.generate_stac(dataset, dataset.data_type or "cog")
-    collection = schemas.DashboardCollection.parse_obj(collection_data)
-    publisher.ingest(collection)
-
-    return_dict = {
-        "message": f"Successfully published collection: {dataset.collection}."
-    }
-
-    if dataset.data_type == schemas.DataType.cog:
-        workflow_runs = []
-        for discovery in dataset.discovery_items:
-            discovery.collection = dataset.collection
-            response = await start_workflow_execution(discovery)
-            workflow_runs.append(response.id)
-        if workflow_runs:
-            return_dict["message"] += f" {len(workflow_runs)}  workflows initiated."
-            return_dict["workflows_ids"] = workflow_runs
-
-    return return_dict
 
 
 @app.get("/auth/me", tags=["Auth"], response_model=schemas.WhoAmIResponse)

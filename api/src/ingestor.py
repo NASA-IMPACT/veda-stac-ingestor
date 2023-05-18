@@ -4,8 +4,6 @@ import traceback
 from datetime import datetime
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence
 
-import boto3
-import ddbcereal
 from boto3.dynamodb.types import TypeDeserializer
 from pypgstac.db import PgstacDB
 from src.auth import get_settings
@@ -23,37 +21,15 @@ if TYPE_CHECKING:
     from aws_lambda_typing.events.dynamodb_stream import DynamodbRecord
 
 
-# Hack to avoid issues deserializing large values
-# https://github.com/boto/boto3/issues/2500#issuecomment-654925049
-boto3.dynamodb.types.DYNAMODB_CONTEXT = decimal.Context(prec=100)
-# Inhibit Inexact Exceptions
-boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Inexact] = 0
-# Inhibit Rounded Exceptions
-boto3.dynamodb.types.DYNAMODB_CONTEXT.traps[decimal.Rounded] = 0
-
-
 def get_queued_ingestions(records: List["DynamodbRecord"]) -> Iterator[Ingestion]:
-    """
-    Get stream of ingestions that have been queue in the dynamodb database
-    """
     deserializer = TypeDeserializer()
     for record in records:
         # Parse Record
-        try:
-            parsed = {
-                k: deserializer.deserialize(v)
-                for k, v in record["dynamodb"]["NewImage"].items()
-            }
-        except decimal.Rounded:
-            print("Decimal rounding error - using alternate deserializer")
-            # The above hack doesn't cover all cases
-            # ddbcereal can, but is slower and has less eyes on its codebase than boto.
-            alt_deserializer = ddbcereal.deserializer()
-            parsed = {
-                k: alt_deserializer.deserialize(v)
-                for k, v in record["dynamodb"]["NewImage"].items()
-            }
-        ingestion = Ingestion.construct(**parsed)
+        parsed = {
+            k: deserializer.deserialize(v)
+            for k, v in record["dynamodb"]["NewImage"].items()
+        }
+        ingestion = Ingestion.parse_obj(parsed)
         if ingestion.status == Status.queued:
             yield ingestion
 
