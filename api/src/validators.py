@@ -78,16 +78,6 @@ def url_is_accessible(href: str):
         )
 
 
-def cog_default_exists(item_assets: Dict):
-    """
-    Ensures `cog_default` key exists in item_assets in a collection
-    """
-    try:
-        item_assets["cog_default"]
-    except KeyError:
-        raise ValueError("Collection doesn't have a default cog placeholder")
-
-
 def time_density_is_valid(is_periodic: bool, time_density: Union[str, None]):
     """
     Ensures that the time_density is valid based on the value of is_periodic
