@@ -41,13 +41,13 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
 ## Using the API
 
-Please go through the [API Usage docs](API_usage.md) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
+Please go through the [VEDA contribution docs](https://nasa-impact.github.io/veda-docs/contributing/dataset-ingestion.html) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
 
 ## Deployment
 
 ### Fetch environment variables using AWS CLI
 
-To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file. 
+To retrieve the variables for a stage that has been previously deployed, the secrets manager can be used to quickly populate an .env file.
 > Note: The environment variables stored as AWS secrets are manually maintained and should be reviewed before using.
 
 ```
