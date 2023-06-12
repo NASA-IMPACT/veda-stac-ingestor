@@ -1,6 +1,7 @@
 # VEDA STAC Ingestor
 
-This service provides an entry-point for users/services to add new records to our STAC database. Its primary functions are to 1) validate the STAC Items before insertion, 2) batch the insertions to reduce load on our STAC database.
+This service provides an entry-point for users/services to add new records to the VEDA data catalog (Spatio-Temporal Asset Catalog, STAC). 
+Its primary functions are to 1) validate the STAC Items before insertion, 2) batch the insertions to reduce load on our STAC database.
 
 STAC items are validated to ensure that:
 
@@ -9,6 +10,7 @@ STAC items are validated to ensure that:
 1. Its collection exists
 
 ![architecture diagram](.readme/architecture.svg)
+
 
 ## Development
 
@@ -39,9 +41,11 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 
    _Note:_ If no `.env` file is present, the API will connect to resources in the `dev` deployment via [pydantic-ssm-settings](https://github.com/developmentseed/pydantic-ssm-settings). This requires that your `AWS_PROFILE` be set to the profile associated with the AWS account hosting the `dev` deployment.
 
+
 ## Using the API
 
-Please go through the [VEDA contribution docs](https://nasa-impact.github.io/veda-docs/contributing/dataset-ingestion.html) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
+Please go through the [VEDA Contributing Docs](https://nasa-impact.github.io/veda-docs/contributing/dataset-ingestion/index.html) for a guide on ingesting and publishing data to the VEDA data store & STAC API.
+
 
 ## Deployment
 
@@ -61,6 +65,7 @@ This script is also available at `scripts/sync_env.sh`, which can be invoked wit
 ```
 . scripts/sync_env.sh stac-ingestor-env-secret-<stage>
 ```
+
 
 ## License
 
