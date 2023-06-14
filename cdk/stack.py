@@ -75,6 +75,7 @@ class StacIngestionApi(Stack):
             "STAC_DB_VPC_ID": config.stac_db_vpc_id,
             "STAC_DB_SECURITY_GROUP_ID": config.stac_db_security_group_id,
             "STAC_DB_PUBLIC_SUBNET": config.stac_db_public_subnet,
+            "STAGE": config.stage,
         }
 
         db_secret = self.get_db_secret(config.stac_db_secret_name, config.stage)
