@@ -1,3 +1,4 @@
+import logging
 import os
 from getpass import getuser
 from typing import Dict, Union
@@ -15,6 +16,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from src.doc import DESCRIPTION
+from src.monitoring import LoggerRouteHandler, logger, tracer
+from starlette.requests import Request
+
+logging.getLogger("botocore.credentials").disabled = True
+logging.getLogger("botocore.utils").disabled = True
+logging.getLogger("rio-tiler").setLevel(logging.ERROR)
 
 settings = (
     config.Settings()
@@ -37,6 +44,7 @@ app = FastAPI(
     },
     contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
 )
+app.router.route_class = LoggerRouteHandler
 
 publisher = collection_loader.Publisher()
 
@@ -284,3 +292,27 @@ def who_am_i(claims=Depends(auth.decode_token)):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return JSONResponse(str(exc), status_code=422)
+
+
+@app.middleware("http")
+async def add_correlation_id(request: Request, call_next):
+    """Add correlation ids to all requests and subsequent logs/traces"""
+    # Get correlation id from X-Correlation-Id header if provided
+    corr_id = request.headers.get("x-correlation-id")
+    if not corr_id:
+        try:
+            # If empty, use request id from aws context
+            corr_id = request.scope["aws.context"].aws_request_id
+        except KeyError:
+            # If empty, use uuid
+            corr_id = "local"
+    # Add correlation id to logs
+    logger.set_correlation_id(corr_id)
+    # Add correlation id to traces
+    tracer.put_annotation(key="correlation_id", value=corr_id)
+
+    response = await tracer.capture_method(call_next)(request)
+    # Return correlation header in response
+    response.headers["X-Correlation-Id"] = corr_id
+    logger.info("Request completed")
+    return response
