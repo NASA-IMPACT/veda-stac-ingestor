@@ -8,6 +8,8 @@ AwsStepArn = constr(regex=r"^arn:aws:states:.+:\d{12}:stateMachine:.+")
 
 
 class Settings(BaseSettings):
+    stage: str = Field(...)
+
     dynamodb_table: str
 
     root_path: Optional[str] = Field(description="Path from where to serve this URL.")
