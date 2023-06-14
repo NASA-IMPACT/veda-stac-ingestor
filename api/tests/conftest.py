@@ -24,6 +24,7 @@ def test_environ():
     os.environ["STAC_URL"] = "https://test-stac.url"
     os.environ["RASTER_URL"] = "https://test-raster.url"
     os.environ["USERPOOL_ID"] = "fake_id"
+    os.environ["STAGE"] = "testing"
 
 
 @pytest.fixture
