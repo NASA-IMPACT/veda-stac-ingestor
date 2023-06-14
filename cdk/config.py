@@ -86,6 +86,11 @@ class Deployment(BaseSettings):
         description="Optional path prefix to add to all api endpoints",
     )
 
+    permissions_boundary_policy_name: Optional[str] = Field(
+        None,
+        description="Name of IAM policy to define stack permissions boundary",
+    )
+
     class Config:
         env_prefix = ""
         case_sentive = False
