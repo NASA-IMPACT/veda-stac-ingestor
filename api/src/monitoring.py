@@ -35,7 +35,7 @@ class LoggerRouteHandler(APIRoute):
             logger.append_keys(fastapi=ctx)
             logger.info("Received request")
             metrics.add_metric(
-                name="/".join(str(request.url.route).split("/")[1:3]),
+                name="/".join(str(request.url.path).split("/")[1:3]),
                 unit=MetricUnit.Count,
                 value=1,
             )
