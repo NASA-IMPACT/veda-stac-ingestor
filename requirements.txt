@@ -8,7 +8,7 @@ httpx
 isort
 moto[s3,dynamodb]
 pytest
-pydantic
+pydantic<2
 python-dotenv
 python-multipart
 pytest-mock
