@@ -283,7 +283,9 @@ class CmrInput(WorkflowInputBase):
 
 
 # allows the construction of models with a list of discriminated unions
-ItemUnion = Annotated[Union[S3Input, CmrInput], Field(discriminator="discovery")]
+ItemUnion = Annotated[
+    Union[S3Input, CmrInput], Field(discriminator="discovery")  # noqa
+]
 
 
 class Dataset(BaseModel):
@@ -300,9 +302,14 @@ class Dataset(BaseModel):
     @validator("collection")
     def check_id(cls, collection):
         if not re.match(r"[a-z]+(?:-[a-z]+)*", collection):
-            raise ValueError(
-                "Invalid id - id must be all lowercase, with optional '-' delimiters"
-            )
+            # allow collection id to "break the rules" if an already-existing collection matches
+            try:
+                validators.collection_exists(collection_id=collection)
+            except ValueError:
+                # overwrite error - the issue isn't the non-existing function, it's the new id
+                raise ValueError(
+                    "Invalid id - id must be all lowercase, with optional '-' delimiters"
+                )
         return collection
 
     @root_validator
