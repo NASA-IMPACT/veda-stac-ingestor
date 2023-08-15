@@ -30,18 +30,7 @@ class CustomLoader(Loader):
                 logger.info(f"Updating extents for collection: {collection_id}.")
                 cur.execute(
                     """
-                    UPDATE collections SET
-                    content = content ||
-                    jsonb_build_object(
-                        'extent', jsonb_build_object(
-                            'spatial', jsonb_build_object(
-                                'bbox', collection_bbox(collections.id)
-                            ),
-                            'temporal', jsonb_build_object(
-                                'interval', collection_temporal_extent(collections.id)
-                            )
-                        )
-                    )
+                    UPDATE collections set content = content || pgstac.collection_extent(collections.id)
                     WHERE collections.id=%s;
                     """,
                     (collection_id,),
