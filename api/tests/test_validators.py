@@ -8,7 +8,7 @@ sample_data = {
     "title": "Caldor Fire Behavior",
     "description": "short description",
     "license": "CC0",
-    "is_periodic": False,
+    "is_perioc": False,
     "time_density": None,
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
@@ -18,7 +18,6 @@ sample_data = {
     "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
-            "discovery": "s3",
             "cogify": False,
             "upload": False,
             "dry_run": True,
@@ -48,7 +47,6 @@ sample_data_datetime = {
     "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
-            "discovery": "s3",
             "cogify": False,
             "upload": False,
             "dry_run": True,

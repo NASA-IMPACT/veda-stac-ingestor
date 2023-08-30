@@ -18,7 +18,12 @@ from pydantic import (
     root_validator,
     validator,
 )
-from src.schema_helpers import BboxExtent, SpatioTemporalExtent, TemporalExtent
+from src.schema_helpers import (
+    BboxExtent,
+    SpatioTemporalExtent,
+    TemporalExtent,
+    DiscoveryItemAsset
+)
 from stac_pydantic import Collection, Item, shared
 from stac_pydantic.links import Link
 from typing_extensions import Annotated
@@ -261,6 +266,9 @@ class S3Input(WorkflowInputBase):
     start_datetime: Optional[datetime]
     end_datetime: Optional[datetime]
     single_datetime: Optional[datetime]
+    id_regex: Optional[str]
+    id_template: Optional[str]
+    assets: Dict[str, DiscoveryItemAsset]
     zarr_store: Optional[str]
 
     @root_validator
@@ -272,6 +280,12 @@ class S3Input(WorkflowInputBase):
             bucket=bucket, prefix=prefix, zarr_store=zarr_store
         )
         return values
+    
+    @validator("assets", always=True, pre=True)
+    def item_assets_required(cls, assets):
+        if not assets:
+            raise ValueError("Specify at least one asset.")
+        return assets
 
 
 class CmrInput(WorkflowInputBase):
@@ -326,7 +340,7 @@ class DataType(str, enum.Enum):
 class COGDataset(Dataset):
     spatial_extent: BboxExtent
     temporal_extent: TemporalExtent
-    sample_files: List[str]  # unknown how this will work with CMR
+    sample_files: List[str]
     data_type: Literal[DataType.cog]
 
     @root_validator
@@ -337,17 +351,12 @@ class COGDataset(Dataset):
         if not (discovery_items := values.get("discovery_items")):
             return
 
-        if "s3" not in [item.discovery for item in discovery_items]:
-            return values
-
-        # TODO cmr handling/validation
         invalid_fnames = []
         for fname in values.get("sample_files", []):
             found_match = False
             for item in discovery_items:
                 if all(
                     [
-                        item.discovery == "s3",
                         re.search(item.filename_regex, fname.split("/")[-1]),
                         "/".join(fname.split("/")[3:]).startswith(item.prefix),
                     ]

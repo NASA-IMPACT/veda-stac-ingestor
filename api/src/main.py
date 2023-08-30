@@ -184,9 +184,7 @@ def delete_collection(collection_id: str):
     status_code=201,
 )
 async def start_workflow_execution(
-    input: Union[schemas.CmrInput, schemas.S3Input] = Body(
-        ..., discriminator="discovery"
-    ),
+    input: schemas.S3Input = Body(...),
 ) -> schemas.BaseResponse:
     """
     Triggers the ingestion workflow

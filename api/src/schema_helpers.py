@@ -1,16 +1,10 @@
+# Smaller utility models to support the larger models in schemas.py
 import enum
 from datetime import datetime
-from typing import List, Union
+from typing import List, Union, Optional
 
 from pydantic import BaseModel, root_validator
 from stac_pydantic.collection import Extent, TimeInterval
-
-# Smaller utility models to support the larger models in schemas.py
-
-
-class DiscoveryEnum(str, enum.Enum):
-    s3 = "s3"
-    cmr = "cmr"
 
 
 class DatetimeInterval(TimeInterval):
@@ -54,3 +48,10 @@ class TemporalExtent(BaseModel):
         if v["startdate"] >= v["enddate"]:
             raise ValueError("Invalid extent - startdate must be before enddate")
         return v
+
+
+class DiscoveryItemAsset(BaseModel):
+    title: str
+    description: Optional[str]
+    roles: Optional[List[str]]
+    regex: str

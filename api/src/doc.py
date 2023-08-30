@@ -104,7 +104,7 @@ collection_id` API.
 
 ## Workflow Executions
 The workflow execution API is used to start a new workflow execution. The workflow
- execution API accepts discovery from s3 or cmr.
+ execution API accepts discovery from s3.
 To run a workflow execution, the user must provide the following information:
 
 **For s3 discovery:**
