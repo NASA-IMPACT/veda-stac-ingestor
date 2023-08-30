@@ -1,5 +1,4 @@
 # Smaller utility models to support the larger models in schemas.py
-import enum
 from datetime import datetime
 from typing import List, Union, Optional
 

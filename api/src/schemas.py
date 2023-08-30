@@ -22,7 +22,7 @@ from src.schema_helpers import (
     BboxExtent,
     SpatioTemporalExtent,
     TemporalExtent,
-    DiscoveryItemAsset
+    DiscoveryItemAsset,
 )
 from stac_pydantic import Collection, Item, shared
 from stac_pydantic.links import Link
@@ -280,7 +280,7 @@ class S3Input(WorkflowInputBase):
             bucket=bucket, prefix=prefix, zarr_store=zarr_store
         )
         return values
-    
+
     @validator("assets", always=True, pre=True)
     def item_assets_required(cls, assets):
         if not assets:
