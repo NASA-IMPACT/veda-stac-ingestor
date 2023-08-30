@@ -30,7 +30,7 @@ This codebase utilizes the [Pydantic SSM Settings](https://github.com/developmen
 2. Install dependencies:
 
    ```
-   pip install -r api/requirements.txt
+   pip install -r requirements.txt -r api/requirements.txt
    ```
 
 3. Run API:
