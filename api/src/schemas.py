@@ -296,12 +296,6 @@ class CmrInput(WorkflowInputBase):
     bounding_box: Optional[List[float]]
 
 
-# allows the construction of models with a list of discriminated unions
-ItemUnion = Annotated[
-    Union[S3Input, CmrInput], Field(discriminator="discovery")  # noqa
-]
-
-
 class Dataset(BaseModel):
     collection: str
     title: str
@@ -310,7 +304,7 @@ class Dataset(BaseModel):
     is_periodic: Optional[bool] = False
     time_density: Optional[str] = None
     links: Optional[List[Link]] = []
-    discovery_items: List[ItemUnion]
+    discovery_items: List[S3Input]
 
     # collection id must be all lowercase, with optional - delimiter
     @validator("collection")
