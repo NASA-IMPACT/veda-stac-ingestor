@@ -264,7 +264,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_EGRESS
             ),
             allow_public_subnet=True,
             memory_size=2048,
@@ -330,7 +330,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_EGRESS
             ),
             allow_public_subnet=True,
             memory_size=2048,
