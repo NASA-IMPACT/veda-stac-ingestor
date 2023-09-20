@@ -79,6 +79,11 @@ class Deployment(BaseSettings):
         description="ID of AWS ECR repository used for OIDC provider",
     )
 
+    permissions_boundary_policy_name: Optional[str] = Field(
+        None,
+        description="Name of IAM policy to define stack permissions boundary",
+    )
+
     class Config:
         env_prefix = ""
         case_sentive = False
