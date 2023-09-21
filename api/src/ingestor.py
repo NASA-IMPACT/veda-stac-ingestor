@@ -7,16 +7,12 @@ from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence
 import boto3
 import ddbcereal
 from boto3.dynamodb.types import TypeDeserializer
+from fastapi.encoders import jsonable_encoder
 from pypgstac.db import PgstacDB
 from src.auth import get_settings
 from src.dependencies import get_table
 from src.schemas import Ingestion, Status
-from src.utils import (
-    IngestionType,
-    convert_decimals_to_float,
-    get_db_credentials,
-    load_into_pgstac,
-)
+from src.utils import IngestionType, get_db_credentials, load_into_pgstac
 
 if TYPE_CHECKING:
     from aws_lambda_typing import context as context_, events
@@ -89,11 +85,9 @@ def handler(event: "events.DynamoDBStreamEvent", context: "context_.Context"):
         print("No queued ingestions to process")
         return
 
-    items = [
-        # NOTE: Important to deserialize values to convert decimals to floats
-        convert_decimals_to_float(ingestion.item)
-        for ingestion in ingestions
-    ]
+    # serialize to JSON-friendly dicts (won't be necessary in Pydantic v2
+    # https://github.com/pydantic/pydantic/issues/1409#issuecomment-1423995424)
+    items = jsonable_encoder(i.item for i in ingestions)
 
     creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
 

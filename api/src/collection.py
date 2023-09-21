@@ -4,6 +4,7 @@ from typing import Union
 import fsspec
 import xarray as xr
 import xstac
+from fastapi.encoders import jsonable_encoder
 from pypgstac.db import PgstacDB
 from src.schemas import (
     COGDataset,
@@ -12,12 +13,7 @@ from src.schemas import (
     SpatioTemporalExtent,
     ZarrDataset,
 )
-from src.utils import (
-    IngestionType,
-    convert_decimals_to_float,
-    get_db_credentials,
-    load_into_pgstac,
-)
+from src.utils import IngestionType, get_db_credentials, load_into_pgstac
 from src.validators import get_s3_credentials
 from src.vedaloader import VEDALoader
 
@@ -148,7 +144,7 @@ class Publisher:
         and loads into the PgSTAC collection table
         """
         creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-        collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
+        collection = [jsonable_encoder(collection.dict(by_alias=True))]
         with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
             load_into_pgstac(
                 db=db, ingestions=collection, table=IngestionType.collections
