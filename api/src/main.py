@@ -288,13 +288,16 @@ def who_am_i(claims=Depends(auth.decode_token)):
     return claims
 
 
+app.include_router(api_router)
+
+
 # exception handling
-@api_router.exception_handler(RequestValidationError)
+@app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return JSONResponse(str(exc), status_code=422)
 
 
-@api_router.middleware("http")
+@app.middleware("http")
 async def add_correlation_id(request: Request, call_next):
     """Add correlation ids to all requests and subsequent logs/traces"""
     # Get correlation id from X-Correlation-Id header if provided
