@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from fastapi.testclient import TestClient
     from src import schemas, services
 
-ingestion_endpoint = "/ingestions"
+ingestion_endpoint = "/api/ingest/ingestions"
 
 
 class TestList:
