@@ -258,7 +258,6 @@ class WorkflowInputBase(BaseModel):
 
 
 class S3Input(WorkflowInputBase):
-    discovery: Literal["s3"]
     prefix: str
     bucket: str
     filename_regex: str = r"[\s\S]*"  # default to match all files in prefix
@@ -286,14 +285,6 @@ class S3Input(WorkflowInputBase):
         if not assets:
             raise ValueError("Specify at least one asset.")
         return assets
-
-
-class CmrInput(WorkflowInputBase):
-    discovery: Literal["cmr"]
-    version: Optional[str]
-    include: Optional[str]
-    temporal: Optional[List[datetime]]
-    bounding_box: Optional[List[float]]
 
 
 class Dataset(BaseModel):

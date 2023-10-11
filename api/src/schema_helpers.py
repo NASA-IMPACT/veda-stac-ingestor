@@ -50,6 +50,7 @@ class TemporalExtent(BaseModel):
 
 
 class DiscoveryItemAsset(BaseModel):
+    """This class is provided to define one of potentially many assets in an ingest"""
     title: str
     description: Optional[str]
     roles: Optional[List[str]]
