@@ -66,6 +66,20 @@ This script is also available at `scripts/sync_env.sh`, which can be invoked wit
 . scripts/sync_env.sh stac-ingestor-env-secret-<stage>
 ```
 
+## Testing
+
+```shell
+pytest
+```
+
+Some tests require a locally-running **pgstac** database, and will be skipped if there isn't one at `postgresql://username:password@localhost:5432/postgis`.
+To run the **pgstac** tests:
+
+```shell
+docker compose up -d
+pytest
+docker compose down
+```
 
 ## License
 
