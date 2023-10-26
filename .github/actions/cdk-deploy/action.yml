@@ -61,7 +61,7 @@ runs:
         ./scripts/sync-env.sh ${{ inputs.env_aws_secret_name }}
         else
         python ${{ inputs.script_path }} --secret-id ${{ inputs.env_aws_secret_name }} --stack-names ${{ inputs.auth_stack_name}},${{ inputs.backend_stack_name}}
-        source .env
+        set -a; source .env; set +a;
         echo "MWAA_ENV=${PROJECT_PREFIX}-${STAGE}-mwaa" >> .env
         cat .env
 
