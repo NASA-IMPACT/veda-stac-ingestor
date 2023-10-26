@@ -64,6 +64,7 @@ runs:
         set -a; source .env; set +a;
         echo "MWAA_ENV=${PROJECT_PREFIX}-${STAGE}-mwaa" >> .env
         cat .env
+        fi
 
     - name: Deploy
       shell: bash
