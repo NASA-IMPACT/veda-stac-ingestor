@@ -47,8 +47,10 @@ class StacIngestionApi(Stack):
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
 
-        data_access_role = iam.Role.from_role_arn(
-            self, "data-access-role", config.data_access_role
+        data_access_role = (
+            iam.Role.from_role_arn(self, "data-access-role", config.data_access_role)
+            if config.data_access_role
+            else None
         )
 
         user_pool = cognito.UserPool.from_user_pool_id(
@@ -77,7 +79,7 @@ class StacIngestionApi(Stack):
             "ROOT_PATH": f"/{config.stage}",
             "NO_PYDANTIC_SSM_SETTINGS": "1",
             "STAC_URL": config.stac_url,
-            "DATA_ACCESS_ROLE": data_access_role.role_arn,
+            "DATA_ACCESS_ROLE": config.data_access_role or "",
             "USERPOOL_ID": config.userpool_id,
             "CLIENT_ID": config.client_id,
             "CLIENT_SECRET": config.client_secret,
@@ -284,10 +286,11 @@ class StacIngestionApi(Stack):
             memory_size=2048,
         )
         table.grant_read_write_data(handler)
-        data_access_role.grant(
-            handler.grant_principal,
-            "sts:AssumeRole",
-        )
+        if data_access_role:
+            data_access_role.grant(
+                handler.grant_principal,
+                "sts:AssumeRole",
+            )
 
         handler.add_to_role_policy(
             iam.PolicyStatement(

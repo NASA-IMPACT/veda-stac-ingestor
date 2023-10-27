@@ -62,7 +62,7 @@ class Deployment(BaseSettings):
 
     raster_url: AnyHttpUrl = Field(description="URL of Raster API")
 
-    data_access_role: AwsArn = Field(
+    data_access_role: Optional[AwsArn] = Field(
         description="ARN of AWS Role used to validate access to S3 data"
     )
 
