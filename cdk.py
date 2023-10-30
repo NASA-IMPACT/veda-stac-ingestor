@@ -37,7 +37,12 @@ stack.StacIngestionApi(
     },
     env=deployment.env,
 )
-
+cdk.CfnOutput(
+    stac_ingestor,
+    "ingestor_api_url",
+    export_name=f"{deployment.stack_name}-ingest-url",
+    value=stac_ingestor.ingestor_api.url,
+)
 for key, value in tags.items():
     cdk.Tags.of(app).add(key, value)
 
