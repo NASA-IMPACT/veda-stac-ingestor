@@ -11,7 +11,7 @@ import src.dependencies as dependencies
 import src.helpers as helpers
 import src.schemas as schemas
 import src.services as services
-from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -44,12 +44,12 @@ app = FastAPI(
     },
     contact={"url": "https://github.com/NASA-IMPACT/veda-stac-ingestor"},
 )
-app.router.route_class = LoggerRouteHandler
+api_router = APIRouter(prefix=settings.path_prefix, route_class=LoggerRouteHandler)
 
 publisher = collection_loader.Publisher()
 
 
-@app.get(
+@api_router.get(
     "/ingestions", response_model=schemas.ListIngestionResponse, tags=["Ingestion"]
 )
 async def list_ingestions(
@@ -64,7 +64,7 @@ async def list_ingestions(
     )
 
 
-@app.post(
+@api_router.post(
     "/ingestions",
     response_model=schemas.Ingestion,
     tags=["Ingestion"],
@@ -86,7 +86,7 @@ async def create_ingestion(
     ).enqueue(db)
 
 
-@app.get(
+@api_router.get(
     "/ingestions/{ingestion_id}",
     response_model=schemas.Ingestion,
     tags=["Ingestion"],
@@ -100,7 +100,7 @@ def get_ingestion(
     return ingestion
 
 
-@app.patch(
+@api_router.patch(
     "/ingestions/{ingestion_id}",
     response_model=schemas.Ingestion,
     tags=["Ingestion"],
@@ -117,7 +117,7 @@ def update_ingestion(
     return updated_item.save(db)
 
 
-@app.delete(
+@api_router.delete(
     "/ingestions/{ingestion_id}",
     response_model=schemas.Ingestion,
     tags=["Ingestion"],
@@ -139,7 +139,7 @@ def cancel_ingestion(
     return ingestion.cancel(db)
 
 
-@app.post(
+@api_router.post(
     "/collections",
     tags=["Collection"],
     status_code=201,
@@ -160,7 +160,7 @@ def publish_collection(collection: schemas.DashboardCollection):
         )
 
 
-@app.delete(
+@api_router.delete(
     "/collections/{collection_id}",
     tags=["Collection"],
     dependencies=[Depends(auth.get_username)],
@@ -177,7 +177,7 @@ def delete_collection(collection_id: str):
         raise HTTPException(status_code=400, detail=(f"{e}"))
 
 
-@app.post(
+@api_router.post(
     "/workflow-executions",
     response_model=schemas.WorkflowExecutionResponse,
     tags=["Workflow-Executions"],
@@ -194,7 +194,7 @@ async def start_workflow_execution(
     return helpers.trigger_discover(input)
 
 
-@app.get(
+@api_router.get(
     "/workflow-executions/{workflow_execution_id}",
     response_model=Union[schemas.ExecutionResponse, schemas.BaseResponse],
     tags=["Workflow-Executions"],
@@ -208,7 +208,7 @@ async def get_workflow_execution_status(
     return helpers.get_status(workflow_execution_id)
 
 
-@app.post("/token", tags=["Auth"], response_model=schemas.AuthResponse)
+@api_router.post("/token", tags=["Auth"], response_model=schemas.AuthResponse)
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Dict:
@@ -224,7 +224,7 @@ async def get_token(
     )
 
 
-@app.post(
+@api_router.post(
     "/dataset/validate",
     tags=["Dataset"],
     dependencies=[Depends(auth.get_username)],
@@ -250,7 +250,7 @@ def validate_dataset(dataset: schemas.COGDataset):
     }
 
 
-@app.post(
+@api_router.post(
     "/dataset/publish", tags=["Dataset"], dependencies=[Depends(auth.get_username)]
 )
 async def publish_dataset(
@@ -280,12 +280,15 @@ async def publish_dataset(
     return return_dict
 
 
-@app.get("/auth/me", tags=["Auth"], response_model=schemas.WhoAmIResponse)
+@api_router.get("/auth/me", tags=["Auth"], response_model=schemas.WhoAmIResponse)
 def who_am_i(claims=Depends(auth.decode_token)):
     """
     Return claims for the provided JWT
     """
     return claims
+
+
+app.include_router(api_router)
 
 
 # exception handling

@@ -5,6 +5,7 @@ from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.metrics import MetricUnit  # noqa: F401
 from fastapi import Request, Response
 from fastapi.routing import APIRoute
+
 from src.config import Settings
 
 settings = Settings()
@@ -40,7 +41,7 @@ class LoggerRouteHandler(APIRoute):
                 value=1,
             )
             tracer.put_annotation(key="path", value=request.url.path)
-            tracer.capture_method(original_route_handler)(request)
+            await tracer.capture_method(original_route_handler)(request)
             return await original_route_handler(request)
 
         return route_handler

@@ -1,10 +1,11 @@
 import os
-from typing import Union
+from typing import Optional, Union
 
 import fsspec
 import xarray as xr
 import xstac
 from pypgstac.db import PgstacDB
+
 from src.schemas import (
     COGDataset,
     DashboardCollection,
@@ -13,6 +14,7 @@ from src.schemas import (
     ZarrDataset,
 )
 from src.utils import (
+    DbCreds,
     IngestionType,
     convert_decimals_to_float,
     get_db_credentials,
@@ -40,8 +42,10 @@ class Publisher:
         "type": "Collection",
         "stac_version": "1.0.0",
     }
+    db_creds: Optional[DbCreds]
 
-    def __init__(self) -> None:
+    def __init__(self, db_creds: Optional[DbCreds] = None) -> None:
+        self.db_creds = db_creds
         self.func_map = {
             DataType.zarr: self.create_zarr_collection,
             DataType.cog: self.create_cog_collection,
@@ -147,9 +151,9 @@ class Publisher:
         does necessary preprocessing,
         and loads into the PgSTAC collection table
         """
-        creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
+        db_creds = self._get_db_credentials()
         collection = [convert_decimals_to_float(collection.dict(by_alias=True))]
-        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
+        with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
             load_into_pgstac(
                 db=db, ingestions=collection, table=IngestionType.collections
             )
@@ -158,7 +162,13 @@ class Publisher:
         """
         Deletes the collection from the database
         """
-        creds = get_db_credentials(os.environ["DB_SECRET_ARN"])
-        with PgstacDB(dsn=creds.dsn_string, debug=True) as db:
+        db_creds = self._get_db_credentials()
+        with PgstacDB(dsn=db_creds.dsn_string, debug=True) as db:
             loader = VEDALoader(db=db)
             loader.delete_collection(collection_id)
+
+    def _get_db_credentials(self) -> DbCreds:
+        if self.db_creds:
+            return self.db_creds
+        else:
+            return get_db_credentials(os.environ["DB_SECRET_ARN"])

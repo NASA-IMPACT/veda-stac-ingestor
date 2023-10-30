@@ -3,6 +3,7 @@ import os
 from typing import Dict
 
 from aws_cdk import (
+    Aspects,
     Duration,
     RemovalPolicy,
     Stack,
@@ -30,6 +31,19 @@ class StacIngestionApi(Stack):
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        if config.permissions_boundary_policy_name:
+            permission_boundary_policy = iam.ManagedPolicy.from_managed_policy_name(
+                self,
+                "permission-boundary",
+                config.permissions_boundary_policy_name,
+            )
+            iam.PermissionsBoundary.of(self).apply(permission_boundary_policy)
+
+            from cdk.permission_boundary import PermissionBoundaryAspect
+
+            Aspects.of(self).add(PermissionBoundaryAspect(permission_boundary_policy))
+
         table = self.build_table()
         jwks_url = self.build_jwks_url(config.userpool_id)
 
@@ -264,7 +278,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,
@@ -330,7 +344,7 @@ class StacIngestionApi(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
                 if db_subnet_public
-                else ec2.SubnetType.PRIVATE_ISOLATED
+                else ec2.SubnetType.PRIVATE_WITH_NAT
             ),
             allow_public_subnet=True,
             memory_size=2048,

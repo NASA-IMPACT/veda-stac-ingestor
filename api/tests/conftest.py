@@ -1,9 +1,15 @@
+import datetime
 import os
+from typing import Generator
 
 import boto3
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_dynamodb, mock_ssm
+from pypgstac.db import PgstacDB
+from pystac import Collection, Extent, SpatialExtent, TemporalExtent
+from src.schemas import DashboardCollection
 from stac_pydantic import Item
 
 
@@ -25,6 +31,7 @@ def test_environ():
     os.environ["RASTER_URL"] = "https://test-raster.url"
     os.environ["USERPOOL_ID"] = "fake_id"
     os.environ["STAGE"] = "testing"
+    os.environ["PATH_PREFIX"] = "/api/ingest"
 
 
 @pytest.fixture
@@ -145,6 +152,21 @@ def example_stac_item():
 
 
 @pytest.fixture
+def dashboard_collection() -> DashboardCollection:
+    collection = Collection(
+        "test-collection",
+        "A test collection",
+        Extent(
+            SpatialExtent(
+                [[-180, -90, 180, 90]],
+            ),
+            TemporalExtent([[datetime.datetime.utcnow(), None]]),
+        ),
+    )
+    return DashboardCollection.parse_obj(collection.to_dict())
+
+
+@pytest.fixture
 def example_ingestion(example_stac_item):
     from src import schemas
 
@@ -154,3 +176,14 @@ def example_ingestion(example_stac_item):
         status=schemas.Status.queued,
         item=Item.parse_obj(example_stac_item),
     )
+
+
+@pytest.fixture
+def pgstac() -> Generator[PgstacDB, None, None]:
+    dsn = "postgresql://username:password@localhost:5432/postgis"
+    try:
+        psycopg.connect(dsn)
+    except Exception:
+        pytest.skip(f"could not connect to pgstac database: {dsn}")
+    with PgstacDB(dsn, commit_on_exit=False) as db:
+        yield db
