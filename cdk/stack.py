@@ -116,7 +116,7 @@ class StacIngestionApi(Stack):
             db_subnet_public=config.stac_db_public_subnet,
         )
 
-        self.build_api(
+        self.ingestor_api = self.build_api(
             handler=handler,
             stage=config.stage,
         )
@@ -128,6 +128,12 @@ class StacIngestionApi(Stack):
             db_vpc=db_vpc,
             db_security_group=db_security_group,
             db_subnet_public=config.stac_db_public_subnet,
+        )
+
+        self.register_ssm_parameter(
+            name="ingestor_url",
+            value=self.ingestor_api.url,
+            description="URL for ingestor",
         )
 
         self.register_ssm_parameter(
