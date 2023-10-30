@@ -25,7 +25,7 @@ tags = {
     "GitTag": git_tag,
 }
 
-stack.StacIngestionApi(
+stac_ingestor = stack.StacIngestionApi(
     app,
     construct_id=deployment.stack_name,
     config=deployment,
