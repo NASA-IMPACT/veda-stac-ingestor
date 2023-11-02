@@ -11,6 +11,8 @@ from dateutil.relativedelta import relativedelta
 @functools.lru_cache
 def get_s3_credentials():
     from src.main import settings
+    if not settings.data_access_role:
+        return {}
 
     print("Fetching S3 Credentials...")
 
