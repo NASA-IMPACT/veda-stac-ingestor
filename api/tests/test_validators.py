@@ -8,7 +8,7 @@ sample_data = {
     "title": "Caldor Fire Behavior",
     "description": "short description",
     "license": "CC0",
-    "is_periodic": False,
+    "is_perioc": False,
     "time_density": None,
     "spatial_extent": {"xmin": -180, "ymin": -90, "xmax": 180, "ymax": 90},
     "temporal_extent": {
@@ -18,16 +18,22 @@ sample_data = {
     "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
-            "discovery": "s3",
             "cogify": False,
             "upload": False,
             "dry_run": True,
             "prefix": "foo/",
             "bucket": "veda-data-store-staging",
-            "filename_regex": "^(.*)bar.tif$",
+            "id_regex": "^(.*)bar.tif$",
             "datetime_range": None,
             "start_datetime": "2021-08-15T00:00:00Z",
             "end_datetime": "2021-10-21T12:00:00Z",
+            "assets": {
+                "cog_default": {
+                    "regex": "^(.*)bar.tif$",
+                    "description": "Caldor fire test ingest item",
+                    "title": "Caldor fire test ingest title",
+                }
+            },
         }
     ],
     "data_type": "cog",
@@ -48,7 +54,6 @@ sample_data_datetime = {
     "sample_files": ["s3://veda-data-store-staging/foo/bar.tif"],
     "discovery_items": [
         {
-            "discovery": "s3",
             "cogify": False,
             "upload": False,
             "dry_run": True,
